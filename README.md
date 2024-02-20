@@ -2,9 +2,13 @@
 
 jupyter notebooks to fine tune whisper models on vietnamese using colab and/or kaggle
 
-*N.B.* import any trainer or pipeline class from `transformers` crash kaggle TPU session so better use GPU
+*N.B.1* import any trainer or pipeline class from `transformers` crash kaggle TPU session so better use GPU
 
-evaluate accuracy (WER): [evaluate-whisper.ipynb](evaluate-whisper.ipynb)
+*N.B.2* trainer class from `transformers` can auto use multi-GPU like kaggle free T4×2 without code change
+
+evaluate accuracy (WER):
+- on whisper models: [evaluate-whisper.ipynb](evaluate-whisper.ipynb)
+- on wav2vec BERT v2 models: [evaluate-w2vBERT.ipynb](evaluate-w2vBERT.ipynb)
 
 fine-tune whisper tiny with traditional approach:
 - script: [whisper-tiny-traditional.ipynb](whisper-tiny-traditional.ipynb)
