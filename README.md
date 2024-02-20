@@ -1,6 +1,6 @@
 # fine-tune whisper vi
 
-jupyter notebooks to fine tune whisper models on vietnamese using colab and/or kaggle
+jupyter notebooks to fine tune whisper models on vietnamese using kaggle (should also work on colab but not throughly tested)
 
 *N.B.1* import any trainer or pipeline class from `transformers` crash kaggle TPU session so better use GPU
 
@@ -8,6 +8,7 @@ jupyter notebooks to fine tune whisper models on vietnamese using colab and/or k
 
 evaluate accuracy (WER):
 - on whisper models: [evaluate-whisper.ipynb](evaluate-whisper.ipynb)
+- on whisper with PEFT LoRA: [evaluate-whisper.ipynb](evaluate-whisper-lora.ipynb)
 - on wav2vec BERT v2 models: [evaluate-w2vBERT.ipynb](evaluate-w2vBERT.ipynb)
 
 fine-tune whisper tiny with traditional approach:
@@ -16,6 +17,6 @@ fine-tune whisper tiny with traditional approach:
 
 fine-tine whisper large with PEFT-LoRA + int8: [whisper-large-lora.ipynb](whisper-large-lora.ipynb)
 
-fine-tune wav2vec v2 bert: *not yet*
+fine-tune wav2vec v2 bert: [w2v-bert-v2.ipynb](w2v-bert-v2.ipynb)
 
 convert to `openai-whisper`, `whisper.cpp`, `faster-whisper`, ONNX, TensorRT: *not yet*
