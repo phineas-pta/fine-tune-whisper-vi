@@ -20,3 +20,11 @@ fine-tine whisper large with PEFT-LoRA + int8: [whisper-large-lora.ipynb](whispe
 fine-tune wav2vec v2 bert: [w2v-bert-v2.ipynb](w2v-bert-v2.ipynb)
 
 convert to `openai-whisper`, `whisper.cpp`, `faster-whisper`, ONNX, TensorRT: *not yet*
+
+my collection of vietnamese speech datasets: https://huggingface.co/collections/doof-ferb/vietnamese-speech-dataset-65c6af8c15c9950537862fa6
+
+other datasets but cannot find download links:
+- Broadcasting Speech Corpus VOV: https://www.isca-archive.org/iscslp_2006/luong06_iscslp.html
+- VNSpeechCorpus: https://aclanthology.org/L04-1364/
+- VAIS-1000: https://ieee-dataport.org/documents/vais-1000-vietnamese-speech-synthesis-corpus
+- https://arxiv.org/abs/1904.05569
