@@ -6,6 +6,8 @@ jupyter notebooks to fine tune whisper models on vietnamese using kaggle (should
 
 *N.B.2* trainer class from `transformers` can auto use multi-GPU like kaggle free T4×2 without code change
 
+## scripts
+
 evaluate accuracy (WER):
 - on whisper models: [evaluate-whisper.ipynb](evaluate-whisper.ipynb)
 - on whisper with PEFT LoRA: [evaluate-whisper.ipynb](evaluate-whisper-lora.ipynb)
@@ -20,6 +22,8 @@ fine-tine whisper large with PEFT-LoRA + int8: [whisper-large-lora.ipynb](whispe
 fine-tune wav2vec v2 bert: [w2v-bert-v2.ipynb](w2v-bert-v2.ipynb)
 
 convert to `openai-whisper`, `whisper.cpp`, `faster-whisper`, ONNX, TensorRT: *not yet*
+
+## datasets
 
 my collection of vietnamese speech datasets: https://huggingface.co/collections/doof-ferb/vietnamese-speech-dataset-65c6af8c15c9950537862fa6
 
