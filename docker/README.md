@@ -1,13 +1,28 @@
-fine-tune using LoRA based on `vinai/PhoWhisper-large`
+fine-tune using LoRA based on https://huggingface.co/vinai/PhoWhisper-large
 
-deploy on AWS EC2
+remove VIVOS & CommonVoice because already included in above checkpoint
+
+also remove FLEURS so post-training evaluation will be on out-of-distribution data
+
+objective: deploy on AWS EC2
 
 below is just my memory aid to run docker locally
-
 ```bash
 docker build --platform=linux/amd64 --tag=tesstt .
-docker run --rm -dit tesstt
+docker run --rm --gpus=all -d tesstt
+
+docker stop tesstt
+docker images tesstt
+docker rmi tesstt
+
 # docker login -u <registry-user> -p <registry-password> <registry-address>
 docker tag <image-identifier> <registry-address>/<image-identifier>:<tag-name>
 docker push <registry-address>/<image-identifier>:<tag-name>
 ```
+other approach: using docker compose
+```bash
+docker compose up -d
+docker compose stop
+docker compose down --volumes
+```
+additional things: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html

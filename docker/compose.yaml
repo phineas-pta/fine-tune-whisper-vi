@@ -1,0 +1,19 @@
+name: my-whisper
+services:
+  train:
+    build:
+      context: "."
+      platforms: ["linux/amd64"]
+      tags: ["tesstt"]
+    container_name: my-container
+    command: ["python", "train.py"]
+    volumes:
+    - ~/.cache:/workspace/cache
+    - ~/coder/whisper:/workspace/my-whisper-lora
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            capabilities: [gpu]
+            count: all

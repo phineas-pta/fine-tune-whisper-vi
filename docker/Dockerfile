@@ -4,6 +4,6 @@ RUN apt-get update && pip install --no-cache-dir 'datasets[audio]'
 
 WORKDIR /workspace
 
-COPY train.py /workspace/
+ENV XDG_CACHE_HOME=/workspace/cache
 
-CMD ["python", "train.py"]
+COPY train.py /workspace/
