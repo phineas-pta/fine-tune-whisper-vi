@@ -9,7 +9,7 @@ objective: deploy on AWS EC2
 below is just my memory aid to run docker locally
 ```bash
 docker build --platform=linux/amd64 --tag=tesstt .
-docker run --rm --gpus=all -d tesstt
+docker run -it --rm --gpus=all -v ~/.cache:/workspace/cache -v ~/coder/whisper:/workspace/my-whisper-lora tesstt
 
 docker stop tesstt
 docker images tesstt

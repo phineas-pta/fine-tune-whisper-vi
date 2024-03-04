@@ -6,7 +6,7 @@ services:
       platforms: ["linux/amd64"]
       tags: ["tesstt"]
     container_name: my-container
-    command: ["python", "train.py"]
+    command: ["train.py"]
     volumes:
     - ~/.cache:/workspace/cache
     - ~/coder/whisper:/workspace/my-whisper-lora
