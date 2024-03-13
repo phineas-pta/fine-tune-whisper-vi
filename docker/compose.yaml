@@ -10,6 +10,8 @@ services:
     volumes:
     - ~/.cache:/workspace/cache
     - ~/coder/whisper:/workspace/my-whisper-lora
+    environment:
+    - HF_TOKEN=███
     deploy:
       resources:
         reservations:

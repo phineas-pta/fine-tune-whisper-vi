@@ -10,7 +10,7 @@ jupyter notebooks to fine tune whisper models on vietnamese using kaggle (should
 
 evaluate accuracy (WER):
 - on whisper models: [evaluate-whisper.ipynb](eval/evaluate-whisper.ipynb)
-- on whisper with PEFT LoRA: [evaluate-whisper.ipynb](eval/evaluate-whisper-lora.ipynb)
+- on whisper with PEFT LoRA: [evaluate-whisper-lora.ipynb](eval/evaluate-whisper-lora.ipynb)
 - on wav2vec BERT v2 models: [evaluate-w2vBERT.ipynb](eval/evaluate-w2vBERT.ipynb)
 
 fine-tune whisper tiny with traditional approach:
