@@ -40,7 +40,9 @@ instance type: `t2.micro` (free tier) or with nvidia gpu: see https://aws.amazon
 
 key pair: `.pem` file for SSH: remember to edit permission to something like `chmod 400` or on windows see https://superuser.com/a/1329702/990893
 
-storage: at least 32 GB
+storage: select “Advanced”:
+- EBS volume (for OS): at least 32 GB
+- instance store volume (for data and cache - depends on instance type): auto-mounted at `/mnt`
 
 network settings: select any security group
 

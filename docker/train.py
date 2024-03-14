@@ -11,6 +11,7 @@ def parse_args():
 	parser.add_argument("-batch-size", type=int, default=16, help="should be multiple of 8")
 	parser.add_argument("-total-steps", type=int, default=int(7e6), help="1 epoch ≈ 1.4M steps")
 	parser.add_argument("-bf16", action="store_true", help="enable optimizations for Ampere or later GPU")
+	parser.add_argument("-resume-training", action="store_true", help="enable optimizations for Ampere or later GPU")
 	return parser.parse_args()
 
 ARGS = parse_args()
@@ -114,7 +115,7 @@ TRAINING_ARGS = Seq2SeqTrainingArguments(
 	logging_steps=25,
 	save_steps=50,
 	evaluation_strategy="no",
-	save_total_limit=3,
+	# save_total_limit=3,
 
 	learning_rate=1e-3,
 	warmup_ratio=.05,  # keep between 5-15%
@@ -131,5 +132,8 @@ TRAINER = Seq2SeqTrainer(
 	tokenizer=FEATURE_EXTRACTOR,  # not TOKENIZER
 )
 
-TRAINER.train()
+if not ARGS.resume_training:
+	TRAINER.train()
+else:
+	TRAINER.train(resume_from_checkpoint=True)
 TRAINER.save_model()

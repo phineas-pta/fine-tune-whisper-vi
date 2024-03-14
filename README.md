@@ -27,6 +27,8 @@ docker image to fine-tune on AWS: [Dockerfile](docker/Dockerfile)
 
 convert to `openai-whisper`, `whisper.cpp`, `faster-whisper`, ONNX, TensorRT: *not yet*
 
+miscellaneous: convert to huggingface audio datasets format
+
 ## datasets
 
 my collection of vietnamese speech datasets: https://huggingface.co/collections/doof-ferb/vietnamese-speech-dataset-65c6af8c15c9950537862fa6
