@@ -6,6 +6,8 @@ jupyter notebooks to fine tune whisper models on vietnamese using kaggle (should
 
 *N.B.2* trainer class from `transformers` can auto use multi-GPU like kaggle free T4×2 without code change
 
+*N.B.3* use default greedy search, because beam search trigger a spike in VRAM usage which may cause out-of-memory (original whisper use num beams = 5, something like `do_sample=True, num_beams=5`)
+
 ## scripts
 
 evaluate accuracy (WER):

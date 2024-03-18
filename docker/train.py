@@ -104,7 +104,6 @@ SAVE_PATH = "./my-whisper-lora"
 TRAINING_ARGS = Seq2SeqTrainingArguments(
 	output_dir=SAVE_PATH,
 	per_device_train_batch_size=ARGS.batch_size,
-	per_device_eval_batch_size=ARGS.batch_size,
 	fp16=not ARGS.bf16,
 	bf16=ARGS.bf16,
 	tf32=ARGS.bf16,
@@ -132,8 +131,5 @@ TRAINER = Seq2SeqTrainer(
 	tokenizer=FEATURE_EXTRACTOR,  # not TOKENIZER
 )
 
-if not ARGS.resume_training:
-	TRAINER.train()
-else:
-	TRAINER.train(resume_from_checkpoint=True)
+TRAINER.train(resume_from_checkpoint=ARGS.resume_training)
 TRAINER.save_model()
