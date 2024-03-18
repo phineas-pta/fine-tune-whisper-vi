@@ -46,7 +46,7 @@ storage: select “Advanced”:
 
 network settings: select any security group
 
-advanced settings: user data: install docker … (somehow doesn’t work)
+~~advanced settings: user data: install docker …~~ (somehow doesn’t work)
 
 edit security groups: add new inbound rules: type SSH + source my IP
 
@@ -57,7 +57,8 @@ install docker:
 sudo su
 yum update -y
 yum install docker -y
-service docker start
+nano /etc/docker/daemon.json  # add: {"data-root": "/path/to/your/new/docker/root"}
+systemctl start docker
 usermod -a -G docker ec2-user
 ```
 exit then reconnect

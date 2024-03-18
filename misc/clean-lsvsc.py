@@ -22,11 +22,13 @@ assert set(train_list).intersection(set(test_list)) == set()
 assert set(train_list).intersection(set(val_list)) == set()
 assert set(test_list).intersection(set(val_list)) == set()
 
-
+os.mkdir("data/train")
 for f in tqdm(train_list):
 	os.rename(f"data/{f}", f"data/train/{f}")
+os.mkdir("data/test")
 for f in tqdm(test_list):
 	os.rename(f"data/{f}", f"data/test/{f}")
+os.mkdir("data/validation")
 for f in tqdm(val_list):
 	os.rename(f"data/{f}", f"data/validation/{f}")
 
