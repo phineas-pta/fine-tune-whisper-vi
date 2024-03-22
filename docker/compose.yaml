@@ -5,6 +5,7 @@ services:
       context: "."
       platforms: ["linux/amd64"]
       tags: ["tesstt"]
+    # image: "<username>/<my-repo>:<tag>"
     container_name: my-container
     command: ["train.py"]
     volumes:

@@ -55,14 +55,18 @@ connect to instance using SSH
 install docker:
 ```bash
 sudo su
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo > /etc/yum.repos.d/nvidia-container-toolkit.repo
 yum update -y
-yum install docker -y
-nano /etc/docker/daemon.json  # add: {"data-root": "/path/to/your/new/docker/root"}
-systemctl start docker
+yum install -y vim docker nvidia-container-toolkit
+nvidia-ctk runtime configure --runtime=docker
+vim /etc/docker/daemon.json  # add: {"data-root": "/path/to/your/new/docker/root"}
 usermod -a -G docker ec2-user
+systemctl start docker
 ```
 exit then reconnect
 ```bash
 docker login --username="someuser" --password="asdfasdf"
-docker run -it --rm --gpus=all -e HF_TOKEN=███ -v ~/.cache:/workspace/cache -v ~/coder/whisper:/workspace/my-whisper-lora <username>/<my-repo>:<tag> train.py --help
+docker run -d --rm --gpus=all -e HF_TOKEN=███ -v ~/whisper/cache:/workspace/cache -v ~/whisper/save:/workspace/my-whisper-lora <username>/<my-repo>:<tag> train.py --help
+docker run -it --entrypoint /bin/bash <username>/<my-repo>:<tag>
 ```
+monitor VRAM usage: `watch nvidia-smi`

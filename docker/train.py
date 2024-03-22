@@ -8,10 +8,10 @@ import argparse
 def parse_args():
 	parser = argparse.ArgumentParser(description="my whisper training script", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument("-pretrained-model", default="vinai/PhoWhisper-large", choices=["vinai/PhoWhisper-large", "openai/whisper-large-v2", "openai/whisper-large-v3"])
-	parser.add_argument("-batch-size", type=int, default=16, help="should be multiple of 8")
+	parser.add_argument("-batch-size", type=int, default=8, help="should be multiple of 8")
 	parser.add_argument("-total-steps", type=int, default=int(5e6), help="1 epoch ≈ 1.5M steps")
-	parser.add_argument("-bf16", action="store_true", help="enable optimizations for Ampere or later GPU")
-	parser.add_argument("-resume-training", action="store_true", help="enable optimizations for Ampere or later GPU")
+	# parser.add_argument("-bf16", action="store_true", help="enable optimizations for Ampere or later GPU")
+	parser.add_argument("-resume-training", action="store_true", help="resume training from ./my-whisper-lora")
 	return parser.parse_args()
 
 ARGS = parse_args()
@@ -70,8 +70,8 @@ def filter_labels(labels_length):
 
 MY_DATA = (MY_DATA
 	.map(prepare_dataset)  # no `num_proc` coz streaming
-	.filter(filter_inputs, input_columns= ["input_length"], remove_columns= ["input_length"])
-	.filter(filter_labels, input_columns=["labels_length"], remove_columns=["labels_length"])
+	.filter(filter_inputs, input_columns= ["input_length"])
+	.filter(filter_labels, input_columns=["labels_length"])
 )
 
 @dataclass
@@ -104,10 +104,9 @@ SAVE_PATH = "./my-whisper-lora"
 TRAINING_ARGS = Seq2SeqTrainingArguments(
 	output_dir=SAVE_PATH,
 	per_device_train_batch_size=ARGS.batch_size,
-	fp16=not ARGS.bf16,
-	bf16=ARGS.bf16,
-	tf32=ARGS.bf16,
-	torch_compile=ARGS.bf16,
+	fp16=True,
+	# bf16=ARGS.bf16, tf32=ARGS.bf16,  # not working properly with PEFT
+	# torch_compile=ARGS.bf16,  # weird error with SDPA attention
 	report_to=["tensorboard"],
 
 	max_steps=ARGS.total_steps,
