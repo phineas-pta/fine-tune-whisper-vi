@@ -4,7 +4,7 @@ remove VIVOS & CommonVoice because already included in above checkpoint
 
 also remove FLEURS so post-training evaluation will be on out-of-distribution data
 
-objective: deploy on AWS EC2
+objective: deploy on AWS EC2 (instance with multiple GPU)
 
 #  my memory aid to run docker locally
 
@@ -62,11 +62,39 @@ nvidia-ctk runtime configure --runtime=docker
 vim /etc/docker/daemon.json  # add: {"data-root": "/path/to/your/new/docker/root"}
 usermod -a -G docker ec2-user
 systemctl start docker
+
+mkdir -p ~/.vim/pack/dist/start
+cd ~/.vim/pack/dist/start
+wget https://github.com/vim-airline/vim-airline/archive/refs/heads/master.zip
+unzip master.zip
+rm master.zip
+mv vim-airline-master vim-airline
+
+tee ~/.vimrc <<EOT
+set visualbell
+set noerrorbells
+set number
+set encoding=UTF-8
+set tabstop=4
+set shiftwidth=4
+let g:airline_powerline_fonts=1
+EOT
 ```
-exit then reconnect
+exit then copy `train.py` to aws (*e.g.* `~/whisper`) then reconnect
 ```bash
 docker login --username="someuser" --password="asdfasdf"
-docker run -d --rm --gpus=all -e HF_TOKEN=███ -v ~/whisper/cache:/workspace/cache -v ~/whisper/save:/workspace/my-whisper-lora <username>/<my-repo>:<tag> train.py --help
-docker run -it --entrypoint /bin/bash <username>/<my-repo>:<tag>
+docker run --gpus=all --rm \
+	-e OMP_NUM_THREADS=1 -e HF_TOKEN=███ \
+	-v ~/whisper:/workspace \
+	<username>/<my-repo>:<tag> \
+	python train.py -total-steps 30 -batch-size 4
 ```
 monitor VRAM usage: `watch nvidia-smi`
+
+# memory allocation: vram usage &amp; batch size
+
+use case: single node - multiple GPU
+
+default config with `transformers` trainer: vertical model parallelism (assigning specific layers to specific GPUs)
+
+attempt to run distributed data parallelism (assigning specific batches to specific GPUs): but error: each GPU get different batch tensor size

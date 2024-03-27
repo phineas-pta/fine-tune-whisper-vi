@@ -8,10 +8,11 @@ import argparse
 def parse_args():
 	parser = argparse.ArgumentParser(description="my whisper training script", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument("-pretrained-model", default="vinai/PhoWhisper-large", choices=["vinai/PhoWhisper-large", "openai/whisper-large-v2", "openai/whisper-large-v3"])
+	parser.add_argument("-use-ytb-data", action="store_true", help="include youtube data to training set")
 	parser.add_argument("-batch-size", type=int, default=8, help="should be multiple of 8")
-	parser.add_argument("-total-steps", type=int, default=int(5e6), help="1 epoch ≈ 1.5M steps")
+	parser.add_argument("-total-steps", type=int, default=int(86000), help="1 epoch ≈ 86k steps without youtube data, or ≈ 1.5M steps with ytb data")
 	# parser.add_argument("-bf16", action="store_true", help="enable optimizations for Ampere or later GPU")
-	parser.add_argument("-resume-training", action="store_true", help="resume training from ./my-whisper-lora")
+	parser.add_argument("-resume-training", action="store_true", help="resume training from ./save")
 	return parser.parse_args()
 
 ARGS = parse_args()
@@ -24,18 +25,27 @@ import peft
 import accelerate
 
 SAMPLING_RATE = 16_000
-def load_my_data(**kwargs):
-	return hugDS.load_dataset(**kwargs, split="train", trust_remote_code=True, streaming=True).cast_column("audio", hugDS.Audio(sampling_rate=SAMPLING_RATE))
+def load_my_data(streaming=True, **kwargs):
+	return hugDS.load_dataset(**kwargs, split="train", trust_remote_code=True, streaming=streaming).cast_column("audio", hugDS.Audio(sampling_rate=SAMPLING_RATE))
 
-MY_DATA = hugDS.concatenate_datasets([  # total: 1.5M samples
-	load_my_data(path="doof-ferb/fpt_fosd"),  # 25.9k
-	load_my_data(path="doof-ferb/infore1_25hours"),  # 14.9k
-	load_my_data(path="doof-ferb/LSVSC").select_columns(["audio", "transcription"]),  # 45k
-	load_my_data(path="quocanh34/viet_vlsp"),  # 171k
-	load_my_data(path="linhtran92/viet_youtube_asr_corpus_v2").select_columns(["audio", "transcription"]),  # 195k
-	load_my_data(path="doof-ferb/infore2_audiobooks"),  # 315k
-	load_my_data(path="linhtran92/viet_bud500"),  # 634k
-])
+
+if ARGS.use_ytb_data:
+	MY_DATA = hugDS.concatenate_datasets([  # total: 1.5M samples
+		load_my_data(path="doof-ferb/fpt_fosd"),  # 25.9k
+		load_my_data(path="doof-ferb/infore1_25hours"),  # 14.9k
+		load_my_data(path="doof-ferb/LSVSC").select_columns(["audio", "transcription"]),  # 45k
+		load_my_data(path="quocanh34/viet_vlsp"),  # 171k
+		load_my_data(path="linhtran92/viet_youtube_asr_corpus_v2").select_columns(["audio", "transcription"]),  # 195k
+		load_my_data(path="doof-ferb/infore2_audiobooks"),  # 315k
+		load_my_data(path="linhtran92/viet_bud500"),  # 634k
+	])
+else:
+	MY_DATA = hugDS.concatenate_datasets([  # total: 86k samples
+		load_my_data(path="doof-ferb/fpt_fosd", streaming=False),  # 25.9k
+		load_my_data(path="doof-ferb/infore1_25hours", streaming=False),  # 14.9k
+		load_my_data(path="doof-ferb/LSVSC", streaming=False).select_columns(["audio", "transcription"]),  # 45k
+	])
+
 
 FEATURE_EXTRACTOR = WhisperFeatureExtractor.from_pretrained(ARGS.pretrained_model)
 TOKENIZER = WhisperTokenizer.from_pretrained(ARGS.pretrained_model, language="vi", task="transcribe")
@@ -99,7 +109,7 @@ MODEL_BIS = peft.get_peft_model(
 )
 MODEL_BIS.print_trainable_parameters()  # 16 millions = 1% of 1.6 billions params of whisper large
 
-SAVE_PATH = "./my-whisper-lora"
+SAVE_PATH = "./save"
 
 TRAINING_ARGS = Seq2SeqTrainingArguments(
 	output_dir=SAVE_PATH,

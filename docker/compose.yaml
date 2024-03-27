@@ -7,12 +7,13 @@ services:
       tags: ["tesstt"]
     # image: "<username>/<my-repo>:<tag>"
     container_name: my-container
-    command: ["train.py"]
+    command: ["python", "train.py", "-total-steps", "30", "-batch-size", "4"]
     volumes:
-    - ~/.cache:/workspace/cache
-    - ~/coder/whisper:/workspace/my-whisper-lora
+    - ~/whisper:/workspace
     environment:
+    - OMP_NUM_THREADS=1
     - HF_TOKEN=███
+    # ipc: host
     deploy:
       resources:
         reservations:
