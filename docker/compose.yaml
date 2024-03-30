@@ -1,19 +1,52 @@
 name: my-whisper
 services:
-  train:
-    build:
-      context: "."
-      platforms: ["linux/amd64"]
-      tags: ["tesstt"]
-    # image: "<username>/<my-repo>:<tag>"
-    container_name: my-container
-    command: ["python", "train.py", "-total-steps", "30", "-batch-size", "4"]
+  download:
+    image: "<username>/<my-repo>:<tag>"
+    container_name: my-container-download
+    command: ["python", "download_data.py"]
     volumes:
-    - ~/whisper:/workspace
+    - ~/.cache:/cache
+    - /mnt/s3/whisper:/workspace
     environment:
-    - OMP_NUM_THREADS=1
+    - HF_TOKEN=███
+    restart_policy: never
+  train:
+    image: "<username>/<my-repo>:<tag>"
+    container_name: my-container-train
+    command: ["python", "train.py", "-pretrained-model", "vinai/PhoWhisper-medium", "-total-steps", "30", "-batch-size", "4"]
+    volumes:
+    - ~/.cache:/cache
+    - /mnt/s3/whisper:/workspace
+    environment:
+    # - OMP_NUM_THREADS=1
     - HF_TOKEN=███
     # ipc: host
+    depends_on:
+      download:
+        condition: service_completed_successfully
+        restart: false
+    restart_policy: never
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            capabilities: [gpu]
+            count: all
+  evaluate:
+    image: "<username>/<my-repo>:<tag>"
+    container_name: my-container-evaluate
+    command: ["python", "evaluate_wer.py"]
+    volumes:
+    - ~/.cache:/cache
+    - /mnt/s3/whisper:/workspace
+    environment:
+    - HF_TOKEN=███
+    depends_on:
+      train:
+        condition: service_completed_successfully
+        restart: false
+    restart_policy: never
     deploy:
       resources:
         reservations:

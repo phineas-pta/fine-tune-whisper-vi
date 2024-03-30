@@ -7,12 +7,15 @@ import argparse
 
 def parse_args():
 	parser = argparse.ArgumentParser(description="my whisper training script", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-	parser.add_argument("-pretrained-model", default="vinai/PhoWhisper-large", choices=["vinai/PhoWhisper-large", "openai/whisper-large-v2", "openai/whisper-large-v3"])
+	parser.add_argument("-pretrained-model", default="vinai/PhoWhisper-medium", choices=["vinai/PhoWhisper-large", "vinai/PhoWhisper-medium", "openai/whisper-large-v3", "openai/whisper-medium"])
 	parser.add_argument("-use-ytb-data", action="store_true", help="include youtube data to training set")
 	parser.add_argument("-batch-size", type=int, default=8, help="should be multiple of 8")
-	parser.add_argument("-total-steps", type=int, default=int(86000), help="1 epoch ≈ 86k steps without youtube data, or ≈ 1.5M steps with ytb data")
+	time_grp = parser.add_mutually_exclusive_group("total epochs or total steps")
+	time_grp.add_argument("-total-epochs", type=float, default=1.)
+	time_grp.add_argument("-total-steps",  type=int, help="1 epoch ≈ 86k samples without youtube data, or ≈ 1.5M samples with ytb data")
 	# parser.add_argument("-bf16", action="store_true", help="enable optimizations for Ampere or later GPU")
-	parser.add_argument("-resume-training", action="store_true", help="resume training from ./save")
+	parser.add_argument("-save-path", default="./save")
+	parser.add_argument("-resume-training", action="store_true")
 	return parser.parse_args()
 
 ARGS = parse_args()
@@ -109,24 +112,39 @@ MODEL_BIS = peft.get_peft_model(
 )
 MODEL_BIS.print_trainable_parameters()  # 16 millions = 1% of 1.6 billions params of whisper large
 
-SAVE_PATH = "./save"
+# a practical learning rate to consider while fine-tuning is a value that is 40× smaller than what has been used for pre-training
+if "tiny" in ARGS.pretrained_model:
+	LEARNING_RATE = 3.75e-5
+elif "base" in ARGS.pretrained_model:
+	LEARNING_RATE = 2.5e-5
+elif "small" in ARGS.pretrained_model:
+	LEARNING_RATE = 1.25e-5
+elif "medium" in ARGS.pretrained_model:
+	LEARNING_RATE = 6.25e-6
+elif "large" in ARGS.pretrained_model:
+	LEARNING_RATE = 5e-6
+else:
+	LEARNING_RATE = 1e-3
+
 
 TRAINING_ARGS = Seq2SeqTrainingArguments(
-	output_dir=SAVE_PATH,
+	output_dir=ARGS.save_path,
 	per_device_train_batch_size=ARGS.batch_size,
 	fp16=True,
 	# bf16=ARGS.bf16, tf32=ARGS.bf16,  # not working properly with PEFT
 	# torch_compile=ARGS.bf16,  # weird error with SDPA attention
 	report_to=["tensorboard"],
 
+	num_train_epochs=ARGS.total_epochs,
 	max_steps=ARGS.total_steps,
 	logging_steps=25,
 	save_steps=50,
 	evaluation_strategy="no",
 	# save_total_limit=3,
 
-	learning_rate=1e-3,
+	learning_rate=LEARNING_RATE,
 	warmup_ratio=.05,  # keep between 5-15%
+	# gradient_accumulation_steps=1 if ARGS.batch_size >= 8 else 8 // ARGS.batch_size,  # a lot slower
 	remove_unused_columns=False, label_names=["labels"],  # required by PEFT
 	# predict_with_generate=True,  # must disable coz PEFT
 )
@@ -140,5 +158,5 @@ TRAINER = Seq2SeqTrainer(
 	tokenizer=FEATURE_EXTRACTOR,  # not TOKENIZER
 )
 
-TRAINER.train(resume_from_checkpoint=ARGS.resume_training)
+TRAINER.train(resume_from_checkpoint=ARGS.resume_training, overwrite_output_dir=not ARGS.resume_training)
 TRAINER.save_model()

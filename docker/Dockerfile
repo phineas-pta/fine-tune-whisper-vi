@@ -2,7 +2,7 @@ FROM huggingface/peft-gpu
 
 WORKDIR /workspace
 
-ENV XDG_CACHE_HOME=/workspace/cache
+ENV XDG_CACHE_HOME=/cache
 ENV PIP_ROOT_USER_ACTION=ignore
 ENV PIP_NO_CACHE_DIR=yes
 

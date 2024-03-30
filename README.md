@@ -31,6 +31,17 @@ convert to `openai-whisper`, `whisper.cpp`, `faster-whisper`, ONNX, TensorRT: *n
 
 miscellaneous: convert to huggingface audio datasets format
 
+## resources
+
+- https://huggingface.co/blog/fine-tune-whisper
+- https://huggingface.co/blog/fine-tune-w2v2-bert
+- https://github.com/openai/whisper/discussions/988
+- https://github.com/huggingface/peft/blob/main/examples/int8_training/peft_bnb_whisper_large_v2_training.ipynb
+- https://github.com/vasistalodagala/whisper-finetune
+- https://github.com/huggingface/community-events/tree/main/whisper-fine-tuning-event
+- https://github.com/krylm/whisper-event-tuning
+- https://www.kaggle.com/code/leonidkulyk/train-infer-mega-pack-wav2vec2-whisper-qlora
+
 ## datasets
 
 my collection of vietnamese speech datasets: https://huggingface.co/collections/doof-ferb/vietnamese-speech-dataset-65c6af8c15c9950537862fa6
