@@ -10,9 +10,9 @@ def parse_args():
 	parser.add_argument("-pretrained-model", default="vinai/PhoWhisper-medium", choices=["vinai/PhoWhisper-large", "vinai/PhoWhisper-medium", "openai/whisper-large-v3", "openai/whisper-medium"])
 	parser.add_argument("-use-ytb-data", action="store_true", help="include youtube data to training set")
 	parser.add_argument("-batch-size", type=int, default=8, help="should be multiple of 8")
-	time_grp = parser.add_mutually_exclusive_group("total epochs or total steps")
+	time_grp = parser.add_mutually_exclusive_group()
 	time_grp.add_argument("-total-epochs", type=float, default=1.)
-	time_grp.add_argument("-total-steps",  type=int, help="1 epoch ≈ 86k samples without youtube data, or ≈ 1.5M samples with ytb data")
+	time_grp.add_argument("-total-steps",  type=int, help="1 epoch ≈ 41k samples without youtube data, or ≈ 1.5M samples with ytb data")
 	# parser.add_argument("-bf16", action="store_true", help="enable optimizations for Ampere or later GPU")
 	parser.add_argument("-save-path", default="./save")
 	parser.add_argument("-resume-training", action="store_true")
@@ -20,12 +20,40 @@ def parse_args():
 
 ARGS = parse_args()
 
+###############################################################################
 
 from dataclasses import dataclass
+import torch
 import datasets as hugDS
 from transformers import WhisperForConditionalGeneration, WhisperFeatureExtractor, WhisperTokenizer, BitsAndBytesConfig, Seq2SeqTrainingArguments, Seq2SeqTrainer
 import peft
 import accelerate
+import bitsandbytes as bnb
+
+FEATURE_EXTRACTOR = WhisperFeatureExtractor.from_pretrained(ARGS.pretrained_model)
+TOKENIZER = WhisperTokenizer.from_pretrained(ARGS.pretrained_model, language="vi", task="transcribe")
+MODEL = WhisperForConditionalGeneration.from_pretrained(ARGS.pretrained_model, use_cache=False, quantization_config=BitsAndBytesConfig(load_in_8bit=True), device_map="auto")
+MODEL.config.forced_decoder_ids = None
+MODEL.config.suppress_tokens = []
+
+# setup to train on multi-GPU with PEFT, see: https://github.com/huggingface/peft/issues/242#issuecomment-1491447956
+if torch.cuda.device_count() > 1:
+	DEV_MAP = MODEL.hf_device_map.copy()
+	DEV_MAP["model.decoder.embed_tokens"] = DEV_MAP["model.decoder.embed_positions"] = DEV_MAP["proj_out"] = MODEL._hf_hook.execution_device
+	accelerate.dispatch_model(MODEL, device_map=DEV_MAP)
+	setattr(MODEL, "model_parallel", True)
+	setattr(MODEL, "is_parallelizable", True)
+
+DUMMY_TOKEN = -100
+
+MODEL_BIS = peft.get_peft_model(
+	peft.prepare_model_for_kbit_training(MODEL, use_gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False}),
+	peft.LoraConfig(r=32, lora_alpha=64, target_modules=["q_proj", "v_proj"], lora_dropout=.05, bias="none")
+)
+MODEL_BIS.print_trainable_parameters()  # 16 millions = 1% of 1.6 billions params of whisper large
+
+###############################################################################
+# prepare data
 
 SAMPLING_RATE = 16_000
 def load_my_data(streaming=True, **kwargs):
@@ -43,27 +71,12 @@ if ARGS.use_ytb_data:
 		load_my_data(path="linhtran92/viet_bud500"),  # 634k
 	])
 else:
-	MY_DATA = hugDS.concatenate_datasets([  # total: 86k samples
+	MY_DATA = hugDS.concatenate_datasets([  # total: 41k samples
 		load_my_data(path="doof-ferb/fpt_fosd", streaming=False),  # 25.9k
 		load_my_data(path="doof-ferb/infore1_25hours", streaming=False),  # 14.9k
-		load_my_data(path="doof-ferb/LSVSC", streaming=False).select_columns(["audio", "transcription"]),  # 45k
+		# load_my_data(path="doof-ferb/LSVSC", streaming=False).select_columns(["audio", "transcription"]),  # 45k
 	])
 
-
-FEATURE_EXTRACTOR = WhisperFeatureExtractor.from_pretrained(ARGS.pretrained_model)
-TOKENIZER = WhisperTokenizer.from_pretrained(ARGS.pretrained_model, language="vi", task="transcribe")
-MODEL = WhisperForConditionalGeneration.from_pretrained(ARGS.pretrained_model, use_cache=False, quantization_config=BitsAndBytesConfig(load_in_8bit=True), device_map="auto")
-MODEL.config.forced_decoder_ids = None
-MODEL.config.suppress_tokens = []
-
-# setup to train on multi-GPU with PEFT, see: https://github.com/huggingface/peft/issues/242#issuecomment-1491447956
-DEV_MAP = MODEL.hf_device_map.copy()
-DEV_MAP["model.decoder.embed_tokens"] = DEV_MAP["model.decoder.embed_positions"] = DEV_MAP["proj_out"] = MODEL._hf_hook.execution_device
-accelerate.dispatch_model(MODEL, device_map=DEV_MAP)
-setattr(MODEL, "model_parallel", True)
-setattr(MODEL, "is_parallelizable", True)
-
-DUMMY_TOKEN = -100
 
 def prepare_dataset(batch):
 	audio = batch["audio"]
@@ -106,11 +119,8 @@ class DataCollatorSpeechSeq2SeqWithPadding:
 
 DATA_COLLATOR = DataCollatorSpeechSeq2SeqWithPadding()
 
-MODEL_BIS = peft.get_peft_model(
-	peft.prepare_model_for_kbit_training(MODEL, use_gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False}),
-	peft.LoraConfig(r=32, lora_alpha=64, target_modules=["q_proj", "v_proj"], lora_dropout=.05, bias="none")
-)
-MODEL_BIS.print_trainable_parameters()  # 16 millions = 1% of 1.6 billions params of whisper large
+###############################################################################
+# training setup
 
 # a practical learning rate to consider while fine-tuning is a value that is 40× smaller than what has been used for pre-training
 if "tiny" in ARGS.pretrained_model:
@@ -126,6 +136,14 @@ elif "large" in ARGS.pretrained_model:
 else:
 	LEARNING_RATE = 1e-3
 
+# 8-bit AdamW optimizer: lower vram usage than default AdamW
+adam_bnb_optim = bnb.optim.Adam8bit(params=MODEL_BIS.parameters(), lr=LEARNING_RATE)
+
+# embedding layers are numerically unstable with 8-bit AdamW, must use full 32-bit
+mng = bnb.optim.GlobalOptimManager.get_instance()
+for module in MODEL_BIS.modules():
+	if isinstance(module, torch.nn.Embedding):
+		mng.register_module_override(module, "weight", {"optim_bits": 32})
 
 TRAINING_ARGS = Seq2SeqTrainingArguments(
 	output_dir=ARGS.save_path,
@@ -140,11 +158,9 @@ TRAINING_ARGS = Seq2SeqTrainingArguments(
 	logging_steps=25,
 	save_steps=50,
 	evaluation_strategy="no",
-	# save_total_limit=3,
+	save_total_limit=5,
 
-	learning_rate=LEARNING_RATE,
-	warmup_ratio=.05,  # keep between 5-15%
-	# gradient_accumulation_steps=1 if ARGS.batch_size >= 8 else 8 // ARGS.batch_size,  # a lot slower
+	gradient_accumulation_steps=1 if ARGS.batch_size >= 8 else 8 // ARGS.batch_size,  # a lot slower
 	remove_unused_columns=False, label_names=["labels"],  # required by PEFT
 	# predict_with_generate=True,  # must disable coz PEFT
 )
@@ -154,6 +170,7 @@ TRAINER = Seq2SeqTrainer(
 	model=MODEL_BIS,
 	train_dataset=MY_DATA,
 	data_collator=DATA_COLLATOR,
+	optimizers=(adam_bnb_optim, None),  # no scheduler
 	# compute_metrics=compute_metrics,  # must disable coz PEFT
 	tokenizer=FEATURE_EXTRACTOR,  # not TOKENIZER
 )

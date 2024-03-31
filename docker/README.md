@@ -1,4 +1,4 @@
-fine-tune using LoRA based on https://huggingface.co/vinai/PhoWhisper-large
+fine-tune using LoRA based on https://huggingface.co/vinai/PhoWhisper-large (or `medium`)
 
 remove VIVOS & CommonVoice because already included in above checkpoint
 

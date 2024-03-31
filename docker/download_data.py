@@ -13,4 +13,4 @@ from datasets import load_dataset
 # _ = load_dataset(path="linhtran92/viet_bud500", split="test")
 _ = load_dataset(path="doof-ferb/infore1_25hours", split="train")
 _ = load_dataset(path="doof-ferb/fpt_fosd", split="train")
-_ = load_dataset(path="doof-ferb/LSVSC")
+# _ = load_dataset(path="doof-ferb/LSVSC")
