@@ -9,18 +9,16 @@ objective: deploy on AWS EC2 (instance with multiple GPU)
 #  my memory aid to run docker locally
 
 ```bash
-docker build --platform=linux/amd64 --tag=tesstt .
-docker run -it --rm --gpus=all -e HF_TOKEN=███ -v ~/.cache:/cache -v ~/coder/whisper:/workspace tesstt python train.py --help
+docker build --platform=linux/amd64 --tag=horimiyasanxmiyamurakun/wisuperuro .
+docker run -it --rm --gpus=all -e HF_TOKEN=███ -v ~/.cache:/cache -v ~/coder/whisper:/workspace horimiyasanxmiyamurakun/wisuperuro python train.py --help
 
-docker stop tesstt
-docker images tesstt
-docker rmi tesstt
+# docker login -u <user> -p <password>
+docker push horimiyasanxmiyamurakun/wisuperuro
 
-# docker login -u <registry-user> -p <registry-password> <registry-address>
-docker tag tesstt <username>/<my-repo>:<tag>
-docker push <username>/<my-repo>:<tag>
+docker images
+docker rmi horimiyasanxmiyamurakun/wisuperuro
 ```
-result image: 17 GB
+result image: 17 GB, available at https://hub.docker.com/repository/docker/horimiyasanxmiyamurakun/wisuperuro
 
 other approach: using docker compose
 ```bash
@@ -28,7 +26,6 @@ docker compose up -d
 docker compose stop
 docker compose down --volumes
 ```
-additional things: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
 
 # my memory aid to launch an AWS EC2 instance
 
@@ -86,10 +83,10 @@ s3fs <your-s3-bucket-name> /mnt/s3 -o passwd_file=~/.passwd-s3fs -o url=https://
 ```
 exit then copy `train.py` to aws (*e.g.* `~/whisper`) then reconnect
 ```bash
-docker login --username="someuser" --password="asdfasdf"
+docker pull horimiyasanxmiyamurakun/wisuperuro
 docker ps -a
 # do not enable `--rm` to keep logs
-yolo() { tmp="$1"; shift 1; docker run --gpus=all -e HF_TOKEN=███ -v ~/.cache:/cache -v /mnt/s3/whisper:/workspace --name "$tmp" <username>/<my-repo>:<tag> "$@"; }
+yolo() { tmp="$1"; shift 1; docker run --gpus=all -e HF_TOKEN=███ -v ~/.cache:/cache -v /mnt/s3/whisper:/workspace --name "$tmp" horimiyasanxmiyamurakun/wisuperuro "$@"; }
 yolo my-container-download python download_data.py
 yolo my-container-train    python train.py -pretrained-model vinai/PhoWhisper-medium -total-steps 30 -batch-size 4
 yolo my-container-evaluate python evaluate_wer.py

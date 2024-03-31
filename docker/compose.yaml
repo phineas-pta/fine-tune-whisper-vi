@@ -1,7 +1,7 @@
 name: my-whisper
 services:
   download:
-    image: "<username>/<my-repo>:<tag>"
+    image: "horimiyasanxmiyamurakun/wisuperuro"
     container_name: my-container-download
     command: ["python", "download_data.py"]
     volumes:
@@ -11,7 +11,7 @@ services:
     - HF_TOKEN=███
     restart_policy: never
   train:
-    image: "<username>/<my-repo>:<tag>"
+    image: "horimiyasanxmiyamurakun/wisuperuro"
     container_name: my-container-train
     command: ["python", "train.py", "-pretrained-model", "vinai/PhoWhisper-medium", "-total-steps", "30", "-batch-size", "4"]
     volumes:
@@ -34,7 +34,7 @@ services:
             capabilities: [gpu]
             count: all
   evaluate:
-    image: "<username>/<my-repo>:<tag>"
+    image: "horimiyasanxmiyamurakun/wisuperuro"
     container_name: my-container-evaluate
     command: ["python", "evaluate_wer.py"]
     volumes:

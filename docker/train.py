@@ -12,7 +12,7 @@ def parse_args():
 	parser.add_argument("-batch-size", type=int, default=8, help="should be multiple of 8")
 	time_grp = parser.add_mutually_exclusive_group()
 	time_grp.add_argument("-total-epochs", type=float, default=1.)
-	time_grp.add_argument("-total-steps",  type=int, help="1 epoch ≈ 41k samples without youtube data, or ≈ 1.5M samples with ytb data")
+	time_grp.add_argument("-total-steps",  type=int, help="1 epoch ≈ 86k samples without youtube data, or ≈ 1.5M samples with ytb data")
 	# parser.add_argument("-bf16", action="store_true", help="enable optimizations for Ampere or later GPU")
 	parser.add_argument("-save-path", default="./save")
 	parser.add_argument("-resume-training", action="store_true")
@@ -71,10 +71,10 @@ if ARGS.use_ytb_data:
 		load_my_data(path="linhtran92/viet_bud500"),  # 634k
 	])
 else:
-	MY_DATA = hugDS.concatenate_datasets([  # total: 41k samples
+	MY_DATA = hugDS.concatenate_datasets([  # total: 86k samples
 		load_my_data(path="doof-ferb/fpt_fosd", streaming=False),  # 25.9k
 		load_my_data(path="doof-ferb/infore1_25hours", streaming=False),  # 14.9k
-		# load_my_data(path="doof-ferb/LSVSC", streaming=False).select_columns(["audio", "transcription"]),  # 45k
+		load_my_data(path="doof-ferb/LSVSC", streaming=False).select_columns(["audio", "transcription"]),  # 45k
 	])
 
 
@@ -137,7 +137,7 @@ else:
 	LEARNING_RATE = 1e-3
 
 # 8-bit AdamW optimizer: lower vram usage than default AdamW
-adam_bnb_optim = bnb.optim.Adam8bit(params=MODEL_BIS.parameters(), lr=LEARNING_RATE)
+adam_bnb_optim = bnb.optim.AdamW8bit(params=MODEL_BIS.parameters(), lr=LEARNING_RATE)
 
 # embedding layers are numerically unstable with 8-bit AdamW, must use full 32-bit
 mng = bnb.optim.GlobalOptimManager.get_instance()
@@ -160,7 +160,7 @@ TRAINING_ARGS = Seq2SeqTrainingArguments(
 	evaluation_strategy="no",
 	save_total_limit=5,
 
-	gradient_accumulation_steps=1 if ARGS.batch_size >= 8 else 8 // ARGS.batch_size,  # a lot slower
+	gradient_accumulation_steps=1 if ARGS.batch_size >= 8 else 8 // ARGS.batch_size,
 	remove_unused_columns=False, label_names=["labels"],  # required by PEFT
 	# predict_with_generate=True,  # must disable coz PEFT
 )
