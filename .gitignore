@@ -1,6 +1,7 @@
 *.wav
 *.mp3
 draft.*
+save/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -16,11 +16,11 @@ use default greedy search, because beam search trigger a spike in VRAM which may
 	<thead>
 		<tr>
 			<th>evaluate WER on test set<br />model @ <code>float16</code></th>
-			<th>CommonVoice v16.1<br />1326 samples</th>
-			<th>FLEURS<br />857 samples</th>
-			<th>VIVOS<br />760 samples</th>
-			<th>Bud500<br />7500 samples</th>
-			<th>LSVSC<br />5683 samples</th>
+			<th>CommonVoice&nbsp;v16.1<br />1326 samples</th>
+			<th>FLEURS<br />857&nbsp;samples</th>
+			<th>VIVOS<br />760&nbsp;samples</th>
+			<th>Bud500<br />7500&nbsp;samples</th>
+			<th>LSVSC<br />5683&nbsp;samples</th>
 		</tr>
 	</thead>
 	<tbody>

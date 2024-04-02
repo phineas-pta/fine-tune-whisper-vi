@@ -27,17 +27,22 @@ import torch
 import datasets as hugDS
 from transformers import WhisperForConditionalGeneration, WhisperFeatureExtractor, WhisperTokenizer, BitsAndBytesConfig, Seq2SeqTrainingArguments, Seq2SeqTrainer
 import peft
-import accelerate
-import bitsandbytes as bnb
 
 FEATURE_EXTRACTOR = WhisperFeatureExtractor.from_pretrained(ARGS.pretrained_model)
 TOKENIZER = WhisperTokenizer.from_pretrained(ARGS.pretrained_model, language="vi", task="transcribe")
-MODEL = WhisperForConditionalGeneration.from_pretrained(ARGS.pretrained_model, use_cache=False, quantization_config=BitsAndBytesConfig(load_in_8bit=True), device_map="auto")
+MODEL = WhisperForConditionalGeneration.from_pretrained(
+	ARGS.pretrained_model, use_cache=False, device_map="auto",
+	quantization_config=BitsAndBytesConfig(
+		load_in_4bit=True, bnb_4bit_use_double_quant=True, bnb_4bit_quant_type="nf4",
+		bnb_4bit_compute_dtype=torch.float16  # torch.bfloat16 if ARGS.bf16 else torch.float16
+	)
+)
 MODEL.config.forced_decoder_ids = None
 MODEL.config.suppress_tokens = []
 
 # setup to train on multi-GPU with PEFT, see: https://github.com/huggingface/peft/issues/242#issuecomment-1491447956
 if torch.cuda.device_count() > 1:
+	import accelerate
 	DEV_MAP = MODEL.hf_device_map.copy()
 	DEV_MAP["model.decoder.embed_tokens"] = DEV_MAP["model.decoder.embed_positions"] = DEV_MAP["proj_out"] = MODEL._hf_hook.execution_device
 	accelerate.dispatch_model(MODEL, device_map=DEV_MAP)
@@ -122,7 +127,7 @@ DATA_COLLATOR = DataCollatorSpeechSeq2SeqWithPadding()
 ###############################################################################
 # training setup
 
-# a practical learning rate to consider while fine-tuning is a value that is 40× smaller than what has been used for pre-training
+# a practical learning rate while fine-tuning is a value 40× smaller than original used for pre-training
 if "tiny" in ARGS.pretrained_model:
 	LEARNING_RATE = 3.75e-5
 elif "base" in ARGS.pretrained_model:
@@ -134,16 +139,8 @@ elif "medium" in ARGS.pretrained_model:
 elif "large" in ARGS.pretrained_model:
 	LEARNING_RATE = 5e-6
 else:
-	LEARNING_RATE = 1e-3
+	LEARNING_RATE = 5e-5
 
-# 8-bit AdamW optimizer: lower vram usage than default AdamW
-adam_bnb_optim = bnb.optim.AdamW8bit(params=MODEL_BIS.parameters(), lr=LEARNING_RATE)
-
-# embedding layers are numerically unstable with 8-bit AdamW, must use full 32-bit
-mng = bnb.optim.GlobalOptimManager.get_instance()
-for module in MODEL_BIS.modules():
-	if isinstance(module, torch.nn.Embedding):
-		mng.register_module_override(module, "weight", {"optim_bits": 32})
 
 TRAINING_ARGS = Seq2SeqTrainingArguments(
 	output_dir=ARGS.save_path,
@@ -160,7 +157,10 @@ TRAINING_ARGS = Seq2SeqTrainingArguments(
 	evaluation_strategy="no",
 	save_total_limit=5,
 
-	gradient_accumulation_steps=1 if ARGS.batch_size >= 8 else 8 // ARGS.batch_size,
+	optim="adamw_bnb_8bit",  # 8-bit AdamW optimizer: lower vram usage than default AdamW
+	learning_rate=LEARNING_RATE,
+	warmup_steps=.05,  # keep between 5-15%
+	gradient_accumulation_steps=1 if ARGS.batch_size >= 8 else 8 // ARGS.batch_size,  # keep effective batch size as min 8 per device
 	remove_unused_columns=False, label_names=["labels"],  # required by PEFT
 	# predict_with_generate=True,  # must disable coz PEFT
 )
@@ -170,7 +170,6 @@ TRAINER = Seq2SeqTrainer(
 	model=MODEL_BIS,
 	train_dataset=MY_DATA,
 	data_collator=DATA_COLLATOR,
-	optimizers=(adam_bnb_optim, None),  # no scheduler
 	# compute_metrics=compute_metrics,  # must disable coz PEFT
 	tokenizer=FEATURE_EXTRACTOR,  # not TOKENIZER
 )
