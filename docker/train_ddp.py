@@ -25,14 +25,16 @@ from dataclasses import dataclass
 import torch
 import datasets as hugDS
 from transformers import WhisperForConditionalGeneration, WhisperFeatureExtractor, WhisperTokenizer, BitsAndBytesConfig, Seq2SeqTrainingArguments, Seq2SeqTrainer
+from accelerate import Accelerator
 import peft
 
 has_bf16 = torch.cuda.is_bf16_supported()  # GPU Ampere or later
+accelerator = Accelerator(project_dir=ARGS.save_path, log_with="tensorboard", mixed_precision="bf16" if has_bf16 else "fp16")
 
 FEATURE_EXTRACTOR = WhisperFeatureExtractor.from_pretrained(ARGS.pretrained_model)
 TOKENIZER = WhisperTokenizer.from_pretrained(ARGS.pretrained_model, language="vi", task="transcribe")
 MODEL = WhisperForConditionalGeneration.from_pretrained(
-	ARGS.pretrained_model, use_cache=False, device_map="auto",
+	ARGS.pretrained_model, use_cache=False, device_map={"": accelerator.device},
 	quantization_config=BitsAndBytesConfig(
 		load_in_4bit=True, bnb_4bit_use_double_quant=True, bnb_4bit_quant_type="nf4",
 		bnb_4bit_compute_dtype=torch.bfloat16 if has_bf16 else torch.float16
@@ -41,23 +43,14 @@ MODEL = WhisperForConditionalGeneration.from_pretrained(
 MODEL.config.forced_decoder_ids = None
 MODEL.config.suppress_tokens = []
 
-# naive model parallelism setup to train on multi-GPU with PEFT, see: https://github.com/huggingface/peft/issues/242#issuecomment-1491447956
-if torch.cuda.device_count() > 1:
-	import accelerate
-	DEV_MAP = MODEL.hf_device_map.copy()
-	DEV_MAP["model.decoder.embed_tokens"] = DEV_MAP["model.decoder.embed_positions"] = DEV_MAP["proj_out"] = MODEL._hf_hook.execution_device
-	accelerate.dispatch_model(MODEL, device_map=DEV_MAP)
-	setattr(MODEL, "model_parallel", True)
-	setattr(MODEL, "is_parallelizable", True)
-# see my other script to use distributed data parallelism for more effective gpu usage
-
 DUMMY_TOKEN = -100
 
 MODEL_BIS = peft.get_peft_model(
 	peft.prepare_model_for_kbit_training(MODEL, use_gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False}),
 	peft.LoraConfig(r=32, lora_alpha=64, target_modules=["q_proj", "v_proj"], lora_dropout=.05, bias="none")
 )
-MODEL_BIS.print_trainable_parameters()  # 16 millions = 1% of 1.6 billions params of whisper large
+if accelerator.is_main_process:
+	MODEL_BIS.print_trainable_parameters()  # 16 millions = 1% of 1.6 billions params of whisper large
 
 ###############################################################################
 # prepare data
@@ -147,6 +140,7 @@ else:
 TRAINING_ARGS = Seq2SeqTrainingArguments(
 	output_dir=ARGS.save_path,
 	per_device_train_batch_size=ARGS.batch_size,
+	# per_device_eval_batch_size=batch_size,
 	fp16=not has_bf16,
 	bf16=has_bf16, tf32=has_bf16,
 	# torch_compile=True,  # SDPA not support whisper yet
@@ -158,6 +152,7 @@ TRAINING_ARGS = Seq2SeqTrainingArguments(
 	save_steps=50,
 	evaluation_strategy="no",
 	save_total_limit=5,
+	accelerator_config={"split_batches": True},  # mandatory for streaming datasets
 
 	optim="adamw_bnb_8bit",  # 8-bit AdamW optimizer: lower vram usage than default AdamW
 	learning_rate=LEARNING_RATE,
@@ -177,4 +172,7 @@ TRAINER = Seq2SeqTrainer(
 )
 
 TRAINER.train(resume_from_checkpoint=ARGS.resume_training)
-TRAINER.save_model()
+
+accelerator.wait_for_everyone()
+if accelerator.is_main_process:
+	TRAINER.save_model()

@@ -29,6 +29,8 @@ docker compose down --volumes
 
 # my memory aid to launch an AWS EC2 instance
 
+## setup
+
 region: select nearest for best latency
 
 choose Amazon Linux image, arch: `x86_64`
@@ -51,7 +53,8 @@ mount S3 storage (to save checkpoint if use spot instance): https://github.com/j
 
 connect to instance using SSH
 
-install docker:
+## install docker
+
 ```bash
 mkdir -p ~/.vim/pack/dist/start
 cd ~/.vim/pack/dist/start
@@ -82,13 +85,20 @@ mkdir /mnt/s3
 s3fs <your-s3-bucket-name> /mnt/s3 -o passwd_file=~/.passwd-s3fs -o url=https://s3-<aws_region>.amazonaws.com -o allow_other
 ```
 exit then copy `train.py` to aws (*e.g.* `~/whisper`) then reconnect
+
+## run docker
+
 ```bash
 docker pull horimiyasanxmiyamurakun/wisuperuro
 docker ps -a
 # do not enable `--rm` to keep logs
 yolo() { tmp="$1"; shift 1; docker run --gpus=all -e HF_TOKEN=███ -v ~/.cache:/cache -v /mnt/s3/whisper:/workspace --name "$tmp" horimiyasanxmiyamurakun/wisuperuro "$@"; }
 yolo my-container-download python download_data.py
-yolo my-container-train    python train.py -pretrained-model vinai/PhoWhisper-medium -total-steps 30 -batch-size 4
+yolo my-container-train    python train.py -pretrained-model vinai/PhoWhisper-large -num-steps 30 -batch-size 4
+yolo my-container-train-ddp \
+	python -m accelerate.commands.launch \
+	--multi_gpu --mixed_precision fp16 --num_machines 1 --num_processes 2 \
+	train_ddp.py -pretrained-model vinai/PhoWhisper-large -num-steps 30 -batch-size 4
 yolo my-container-evaluate python evaluate_wer.py
 ```
 monitor VRAM usage: `watch nvidia-smi`
@@ -96,11 +106,3 @@ monitor VRAM usage: `watch nvidia-smi`
 view logs: `docker logs <container_id>` or see `<docker-data-root>/docker/containers/<container id>/<container id>-json.log` (save logs to S3 storage)
 
 remove stopped container: `docker rm $(docker ps -a -f status=exited -q)`
-
-# memory allocation: vram usage &amp; batch size
-
-use case: single node - multiple GPU
-
-default config with `transformers` trainer: vertical model parallelism (assigning specific layers to specific GPUs)
-
-attempt to run distributed data parallelism (assigning specific batches to specific GPUs) with `python -m torch.distributed.run`: getting error: each GPU get different batch tensor size

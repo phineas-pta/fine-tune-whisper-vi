@@ -13,7 +13,7 @@ services:
   train:
     image: "horimiyasanxmiyamurakun/wisuperuro"
     container_name: my-container-train
-    command: ["python", "train.py", "-pretrained-model", "vinai/PhoWhisper-medium", "-total-steps", "30", "-batch-size", "4"]
+    command: ["python", "train.py", "-pretrained-model", "vinai/PhoWhisper-large", "-num-steps", "30", "-batch-size", "4"]
     volumes:
     - ~/.cache:/cache
     - /mnt/s3/whisper:/workspace
