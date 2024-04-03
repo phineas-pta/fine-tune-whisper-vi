@@ -9,10 +9,8 @@ def parse_args():
 	parser = argparse.ArgumentParser(description="my whisper training script", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument("-pretrained-model", default="vinai/PhoWhisper-medium", choices=["vinai/PhoWhisper-large", "vinai/PhoWhisper-medium", "openai/whisper-large-v3", "openai/whisper-medium"])
 	parser.add_argument("-use-ytb-data", action="store_true", help="include youtube data to training set")
-	parser.add_argument("-batch-size", type=int, default=8, help="should be multiple of 8")
-	time_grp = parser.add_mutually_exclusive_group()
-	time_grp.add_argument("-num-epochs", type=float, default=1.)
-	time_grp.add_argument("-num-steps",  type=int, help="1 epoch ≈ 86k samples without youtube data, or ≈ 1.5M samples with ytb data")
+	parser.add_argument("-batch-size", type=int, default=8, help="should be a power of 2")
+	parser.add_argument("-num-steps",  type=int, help="1 epoch ≈ 86k samples without youtube data, or ≈ 1.5M samples with ytb data")
 	parser.add_argument("-save-path", default="./save")
 	parser.add_argument("-resume-training", action="store_true")
 	return parser.parse_args()
@@ -56,7 +54,10 @@ DUMMY_TOKEN = -100
 MODEL_BIS = peft.get_peft_model(
 	peft.prepare_model_for_kbit_training(MODEL, use_gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False}),
 	peft.LoraConfig(r=32, lora_alpha=64, target_modules=["q_proj", "v_proj"], lora_dropout=.05, bias="none")
+	# peft.AdaLoraConfig(…)  # higher number of trainable parameters
 )
+MODEL_BIS.model.model.encoder.conv1.register_forward_hook(lambda module, input, output: output.requires_grad_(True))  # re-enable grad computation for conv layer
+
 MODEL_BIS.print_trainable_parameters()  # 16 millions = 1% of 1.6 billions params of whisper large
 
 ###############################################################################
@@ -67,21 +68,19 @@ def load_my_data(streaming=True, **kwargs):
 	return hugDS.load_dataset(**kwargs, split="train", trust_remote_code=True, streaming=streaming).cast_column("audio", hugDS.Audio(sampling_rate=SAMPLING_RATE))
 
 
+MY_DATA = hugDS.concatenate_datasets([  # total: 86k samples
+	load_my_data(path="doof-ferb/fpt_fosd", streaming=False),  # 25.9k
+	load_my_data(path="doof-ferb/infore1_25hours", streaming=False),  # 14.9k
+	load_my_data(path="doof-ferb/LSVSC", streaming=False).select_columns(["audio", "transcription"]),  # 45k
+]).to_iterable_dataset()
+
 if ARGS.use_ytb_data:
 	MY_DATA = hugDS.concatenate_datasets([  # total: 1.5M samples
-		load_my_data(path="doof-ferb/fpt_fosd"),  # 25.9k
-		load_my_data(path="doof-ferb/infore1_25hours"),  # 14.9k
-		load_my_data(path="doof-ferb/LSVSC").select_columns(["audio", "transcription"]),  # 45k
+		MY_DATA,
 		load_my_data(path="quocanh34/viet_vlsp"),  # 171k
 		load_my_data(path="linhtran92/viet_youtube_asr_corpus_v2").select_columns(["audio", "transcription"]),  # 195k
 		load_my_data(path="doof-ferb/infore2_audiobooks"),  # 315k
 		load_my_data(path="linhtran92/viet_bud500"),  # 634k
-	])
-else:
-	MY_DATA = hugDS.concatenate_datasets([  # total: 86k samples
-		load_my_data(path="doof-ferb/fpt_fosd", streaming=False),  # 25.9k
-		load_my_data(path="doof-ferb/infore1_25hours", streaming=False),  # 14.9k
-		load_my_data(path="doof-ferb/LSVSC", streaming=False).select_columns(["audio", "transcription"]),  # 45k
 	])
 
 
@@ -152,7 +151,6 @@ TRAINING_ARGS = Seq2SeqTrainingArguments(
 	# torch_compile=True,  # SDPA not support whisper yet
 	report_to=["tensorboard"],
 
-	num_train_epochs=ARGS.num_epochs,
 	max_steps=ARGS.num_steps,
 	logging_steps=25,
 	save_steps=50,

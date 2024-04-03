@@ -6,7 +6,22 @@ also remove FLEURS so post-training evaluation will be on out-of-distribution da
 
 objective: deploy on AWS EC2 (instance with multiple GPU)
 
-#  my memory aid to run docker locally
+# run locally without docker
+
+```
+pip install torch torchaudio --find-links=https://download.pytorch.org/whl/torch_stable.html
+pip install jiwer transformers "datasets[audio]" accelerate peft bitsandbytes
+```
+*e.g.* GPU with 8GB VRAM (scripts auto change number of gradient accumulation steps to have effective batch size at least 8)
+
+```bash
+python download_data.py
+python train.py -pretrained-model vinai/PhoWhisper-medium -batch-size 4 -num-steps 11000 -save-path ./save-medium  # 3 s/step
+python train.py -pretrained-model vinai/PhoWhisper-large  -batch-size 2 -num-steps 11000 -save-path ./save-large   # 7 s/step
+python evaluate_wer.py -save-path ./save-medium -batch-size 16
+```
+
+# my memory aid to run docker locally
 
 ```bash
 docker build --platform=linux/amd64 --tag=horimiyasanxmiyamurakun/wisuperuro .

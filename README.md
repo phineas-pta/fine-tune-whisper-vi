@@ -10,7 +10,7 @@ jupyter notebooks to fine tune whisper models on vietnamese using kaggle (should
 
 ## scripts
 
-evaluate accuracy (WER):
+evaluate accuracy (WER) with batched inference:
 - on whisper models: [evaluate-whisper.ipynb](eval/evaluate-whisper.ipynb)
 - on whisper with PEFT LoRA: [evaluate-whisper-lora.ipynb](eval/evaluate-whisper-lora.ipynb)
 - on wav2vec BERT v2 models: [evaluate-w2vBERT.ipynb](eval/evaluate-w2vBERT.ipynb)
@@ -20,12 +20,13 @@ fine-tune whisper tiny with traditional approach:
 - model with evaluated WER: https://huggingface.co/doof-ferb/whisper-tiny-vi
 
 fine-tine whisper large with PEFT-LoRA + int8:
-- script: [whisper-large-lora.ipynb](train/whisper-large-lora.ipynb)
+- script for 1 GPU: [whisper-large-lora.ipynb](train/whisper-large-lora.ipynb)
+- script for multi-GPU using distributed data parallelism: [whisper-large-lora-DDP.ipynb](train/whisper-large-lora-DDP.ipynb)
 - model with evaluated WER: https://huggingface.co/doof-ferb/whisper-large-peft-lora-vi
 
-fine-tune wav2vec v2 bert: [w2v-bert-v2.ipynb](train/w2v-bert-v2.ipynb)
+(test) fine-tune wav2vec v2 bert: [w2v-bert-v2.ipynb](train/w2v-bert-v2.ipynb)
 
-docker image to fine-tune on AWS: [Dockerfile](docker/Dockerfile)
+docker image to run on AWS EC2: [Dockerfile](docker/Dockerfile), comes with standalone scripts
 
 convert to `openai-whisper`, `whisper.cpp`, `faster-whisper`, ONNX, TensorRT: *not yet*
 
