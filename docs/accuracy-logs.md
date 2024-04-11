@@ -1,5 +1,7 @@
 # accuracy metrics: WER on vietnamese test set
 
+targeting: word error rate (WER) &lt;5%
+
 manually evaluate WER using `transformers` + `jiwer`, value may differ from official value in original paper
 
 always specify language, whisper lang-auto-detect capability sucks!

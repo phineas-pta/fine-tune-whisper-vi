@@ -19,6 +19,8 @@ python download_data.py
 python train.py -pretrained-model vinai/PhoWhisper-medium -batch-size 4 -num-steps 11000 -save-path ./save-medium  # 3 s/step
 python train.py -pretrained-model vinai/PhoWhisper-large  -batch-size 2 -num-steps 11000 -save-path ./save-large   # 7 s/step
 python evaluate_wer.py -save-path ./save-medium -batch-size 16
+
+python -m tensorboard.main --logdir ./save-medium/runs/…
 ```
 
 # my memory aid to run docker locally

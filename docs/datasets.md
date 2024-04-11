@@ -38,7 +38,7 @@ links
 
 ## FOSD: FPT open speech dataset
 
-released publicly in 2018 by FPT Corporation
+released publicly in 2018 by FPT Corporation to celebrate its 30th anniversary
 
 30h - ? speakers - 25.9k samples
 
@@ -73,7 +73,7 @@ links:
 - mirror:
   - https://files.huylenguyen.com/25hours.zip
   - https://files.huylenguyen.com/audiobooks.zip
-  - unzip password: BroughtToYouByInfoRe
+  - unzip password: `BroughtToYouByInfoRe`
 - my mirror on huggingface:
   - https://huggingface.co/datasets/doof-ferb/infore1_25hours
   - https://huggingface.co/datasets/doof-ferb/infore2_audiobooks
@@ -96,3 +96,32 @@ links:
 - official announcement: https://www.mdpi.com/2079-9292/13/5/977
 - official download: https://drive.google.com/drive/folders/1tiPKaIOC7bt6isv5qFqf61O_2jFK8ZOI
 - my mirror on huggingface: https://huggingface.co/datasets/doof-ferb/LSVSC
+
+## VAIS-1000
+
+released in 2017 by VAIS (Vietnam Artificial Intelligence Solution)
+
+small only 1h40min audio - 1 speaker (female northern accent) - 1k samples
+
+links:
+- official announcement: https://vais.vn/vi/tai-ve/hts_for_vietnamese (dead)
+- mirror: https://github.com/undertheseanlp/text_to_speech/tree/run/data/vais1000/raw
+- my mirror on huggingface: https://huggingface.co/datasets/doof-ferb/vais1000
+
+# not public datasets
+
+- Broadcasting Speech Corpus VOV: https://www.isca-archive.org/iscslp_2006/luong06_iscslp.html
+- VNSpeechCorpus: https://aclanthology.org/L04-1364/
+- https://arxiv.org/abs/1904.05569
+- ViASR: https://aclanthology.org/2023.paclic-1.38/
+- Viettel call center data: https://vlsp.org.vn/sites/default/files/2019-10/VLSP2019-ASR-MaiVanTuan.pdf
+- ELRA Catalogue: GlobalPhone
+  - https://catalog.elra.info/en-us/repository/browse/ELRA-S0322/
+  - https://catalog.elra.info/en-us/repository/browse/ELRA-S0432/
+- DataOcean AI:
+  - https://en.dataoceanai.com/dataset/c52-5419.htm
+  - https://en.dataoceanai.com/dataset/c52-5565.htm
+  - https://en.dataoceanai.com/dataset/c52-5579.htm
+  - https://en.dataoceanai.com/dataset/c52-5583.htm
+  - https://en.dataoceanai.com/dataset/c52-5689.htm
+- NIST OpenKWS13 Evaluation Workshop
