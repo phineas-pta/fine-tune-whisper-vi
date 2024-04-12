@@ -9,7 +9,7 @@ def parse_args():
 	parser = argparse.ArgumentParser(description="my whisper training script", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument("-pretrained-model", default="vinai/PhoWhisper-medium", choices=["vinai/PhoWhisper-large", "vinai/PhoWhisper-medium", "openai/whisper-large-v3", "openai/whisper-medium"])
 	parser.add_argument("-use-ytb-data", action="store_true", help="include youtube data to training set")
-	parser.add_argument("-batch-size", type=int, default=8, help="should be a power of 2")
+	parser.add_argument("-batch-size", type=int, default=8, help="should be a multiple of GPU count")
 	parser.add_argument("-num-steps",  type=int, help="1 epoch ≈ 86k samples without youtube data, or ≈ 1.5M samples with ytb data")
 	parser.add_argument("-save-path", default="./save")
 	parser.add_argument("-resume-training", action="store_true")
@@ -65,7 +65,7 @@ MY_DATA = hugDS.concatenate_datasets([  # total: 86k samples
 	load_my_data(path="doof-ferb/fpt_fosd", streaming=False),  # 25.9k
 	load_my_data(path="doof-ferb/infore1_25hours", streaming=False),  # 14.9k
 	load_my_data(path="doof-ferb/LSVSC", streaming=False).select_columns(["audio", "transcription"]),  # 45k
-]).to_iterable_dataset()
+]).to_iterable_dataset()  # much faster when doing map/filter
 
 if ARGS.use_ytb_data:
 	MY_DATA = hugDS.concatenate_datasets([  # total: 1.5M samples

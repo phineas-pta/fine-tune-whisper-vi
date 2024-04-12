@@ -72,7 +72,7 @@ MY_DATA = hugDS.concatenate_datasets([  # total: 86k samples
 	load_my_data(path="doof-ferb/fpt_fosd", streaming=False),  # 25.9k
 	load_my_data(path="doof-ferb/infore1_25hours", streaming=False),  # 14.9k
 	load_my_data(path="doof-ferb/LSVSC", streaming=False).select_columns(["audio", "transcription"]),  # 45k
-]).to_iterable_dataset()
+]).to_iterable_dataset()  # much faster when doing map/filter
 
 if ARGS.use_ytb_data:
 	MY_DATA = hugDS.concatenate_datasets([  # total: 1.5M samples

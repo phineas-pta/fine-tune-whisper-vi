@@ -1,7 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""convert LSVSC_100 to huggingface audio datasets format"""
+"""
+convert LSVSC_100 to huggingface audio datasets format
+ATTENTION: edit file `LSVSC_train.json` & `helck_finale.json` at entry `33614.wav`: field `text` is badly entered
+"""
+
+###############################################################################
+# commands to download files in colab
+
+# !gdown 1bTLibQ8rmXo82YXViUr7wc2JZ5oIg9xQ  # the .rar file in official google drive download link
+# !unrar x LSVSC_100.rar
+# then upload 3 additional files: LSVSC_train.json + LSVSC_test.json + LSVSC_valid.json
+# %pip install -q 'datasets[audio]'
 
 ###############################################################################
 
@@ -51,10 +62,11 @@ df["transcription"] = (df["text"]
 	.str.replace("\n+",   " ", regex=True)
 	.str.replace("\r+",   " ", regex=True)
 	.str.replace(" +",    " ", regex=True)
-	.str.replace("\\", "")
-	.str.replace(chr(65279), "")
+	.str.replace("\\", "", regex=False)
+	.str.replace(chr(65279), "", regex=False)
 	.str.strip()
 )
+df[df["transcription"] == ""]  # make sure 33614.wav is fixed
 
 topic_list = {
 	"0": "news",
