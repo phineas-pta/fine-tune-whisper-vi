@@ -9,6 +9,7 @@ def parse_args():
 	parser = argparse.ArgumentParser(description="my whisper training script", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument("-pretrained-model", default="vinai/PhoWhisper-medium", choices=["vinai/PhoWhisper-large", "vinai/PhoWhisper-medium", "openai/whisper-large-v3", "openai/whisper-medium"])
 	parser.add_argument("-use-ytb-data", action="store_true", help="include youtube data to training set")
+	parser.add_argument("-apply-spec-augment", action="store_true", help="apply *SpecAugment* data augmentation to the input features")
 	parser.add_argument("-batch-size", type=int, default=8, help="should be a power of 2")
 	parser.add_argument("-num-steps",  type=int, help="1 epoch ≈ 86k samples without youtube data, or ≈ 1.5M samples with ytb data")
 	parser.add_argument("-save-path", default="./save")
@@ -38,6 +39,9 @@ MODEL = WhisperForConditionalGeneration.from_pretrained(
 )
 MODEL.config.forced_decoder_ids = None
 MODEL.config.suppress_tokens = []
+if ARGS.apply_spec_augment:
+	MODEL.config.apply_spec_augment = True
+	MODEL.config.mask_time_prob = MODEL.config.mask_feature_prob = .05
 
 # naive model parallelism setup to train on multi-GPU with PEFT, see: https://github.com/huggingface/peft/issues/242#issuecomment-1491447956
 if torch.cuda.device_count() > 1:
@@ -87,7 +91,10 @@ if ARGS.use_ytb_data:
 def prepare_dataset(batch):
 	audio = batch["audio"]
 	batch["input_length"] = len(audio["array"])  # compute input length
-	batch["input_features"] = FEATURE_EXTRACTOR(audio["array"], sampling_rate=SAMPLING_RATE).input_features[0]  # compute log-Mel input features
+	inputs = FEATURE_EXTRACTOR(audio["array"], sampling_rate=SAMPLING_RATE, return_attention_mask=ARGS.apply_spec_augment)
+	batch["input_features"] = inputs.input_features[0]  # compute log-Mel input features
+	if ARGS.apply_spec_augment:  # if SpecAugment is used, return attention_mask to guide the mask along time axis
+		batch["attention_mask"] = inputs.attention_mask[0]
 	batch["labels"] = TOKENIZER(batch["transcription"]).input_ids  # encode target text to label ids
 	batch["labels_length"] = len(batch["labels"])  # compute labels length
 	return batch
@@ -114,6 +121,8 @@ class DataCollatorSpeechSeq2SeqWithPadding:
 		label_features = [{"input_ids"     : feature["labels"]        } for feature in features]  # get the tokenized label sequences
 
 		batch = FEATURE_EXTRACTOR.pad(input_features, return_tensors="pt")  # treat the audio inputs by simply returning torch tensors
+		if ARGS.apply_spec_augment:
+			batch["attention_mask"] = torch.LongTensor([feature["attention_mask"] for feature in features])
 		labels_batch =  TOKENIZER.pad(label_features, return_tensors="pt")  # pad the labels to max length
 		labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), DUMMY_TOKEN)  # replace padding with -100 to ignore loss correctly
 

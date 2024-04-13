@@ -47,3 +47,6 @@ miscellaneous: convert to huggingface audio datasets format
 - https://github.com/krylm/whisper-event-tuning
 - https://www.kaggle.com/code/leonidkulyk/train-infer-mega-pack-wav2vec2-whisper-qlora
 - https://github.com/huggingface/transformers/blob/main/examples/pytorch/speech-recognition/run_speech_recognition_seq2seq.py
+- https://alphacephei.com/nsh/2023/01/15/whisper-finetuning.html
+- https://discuss.huggingface.co/t/how-to-apply-specaugment-to-a-whisper/40435/3
+- https://deepgram.com/learn/whisper-v3-results

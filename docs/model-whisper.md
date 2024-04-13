@@ -19,6 +19,8 @@ training data: vietnamese part: only 691h audio for transcription task (+1.7k ho
   - https://github.com/openai/whisper/discussions/988
   - https://github.com/huggingface/peft/blob/main/examples/int8_training/peft_bnb_whisper_large_v2_training.ipynb
 
+**catastrophic forgetting**: after specific language finetuning, its accuracy on previous languages deteriorates
+
 ## audio pre-processing techniques
 
 remove non-speech segments: SileroVAD: https://github.com/snakers4/silero-vad
