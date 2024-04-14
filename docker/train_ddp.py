@@ -65,20 +65,21 @@ def load_my_data(streaming=True, **kwargs):
 	return hugDS.load_dataset(**kwargs, split="train", trust_remote_code=True, streaming=streaming).cast_column("audio", hugDS.Audio(sampling_rate=SAMPLING_RATE))
 
 
-MY_DATA = hugDS.concatenate_datasets([  # total: 86k samples
-	load_my_data(path="doof-ferb/fpt_fosd", streaming=False),  # 25.9k
-	load_my_data(path="doof-ferb/infore1_25hours", streaming=False),  # 14.9k
-	load_my_data(path="doof-ferb/LSVSC", streaming=False).select_columns(["audio", "transcription"]),  # 45k
-]).to_iterable_dataset()  # much faster when doing map/filter
+with accelerator.main_process_first():
+	MY_DATA = hugDS.concatenate_datasets([  # total: 86k samples
+		load_my_data(path="doof-ferb/fpt_fosd", streaming=False),  # 25.9k
+		load_my_data(path="doof-ferb/infore1_25hours", streaming=False),  # 14.9k
+		load_my_data(path="doof-ferb/LSVSC", streaming=False).select_columns(["audio", "transcription"]),  # 45k
+	]).to_iterable_dataset()  # much faster when doing map/filter
 
-if ARGS.use_ytb_data:
-	MY_DATA = hugDS.concatenate_datasets([  # total: 1.5M samples
-		MY_DATA,
-		load_my_data(path="quocanh34/viet_vlsp"),  # 171k
-		load_my_data(path="linhtran92/viet_youtube_asr_corpus_v2").select_columns(["audio", "transcription"]),  # 195k
-		load_my_data(path="doof-ferb/infore2_audiobooks"),  # 315k
-		load_my_data(path="linhtran92/viet_bud500"),  # 634k
-	])
+	if ARGS.use_ytb_data:
+		MY_DATA = hugDS.concatenate_datasets([  # total: 1.5M samples
+			MY_DATA,
+			load_my_data(path="quocanh34/viet_vlsp"),  # 171k
+			load_my_data(path="linhtran92/viet_youtube_asr_corpus_v2").select_columns(["audio", "transcription"]),  # 195k
+			load_my_data(path="doof-ferb/infore2_audiobooks"),  # 315k
+			load_my_data(path="linhtran92/viet_bud500"),  # 634k
+		])
 
 
 def prepare_dataset(batch):

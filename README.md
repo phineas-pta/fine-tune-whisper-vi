@@ -28,7 +28,7 @@ fine-tine whisper large with PEFT-LoRA + int8:
 - script for multi-GPU using distributed data parallelism: [whisper-large-lora-DDP.ipynb](train/whisper-large-lora-DDP.ipynb)
 - model with evaluated WER: https://huggingface.co/doof-ferb/whisper-large-peft-lora-vi
 
-(testing - not working) fine-tune wav2vec v2 bert: [w2v-bert-v2.ipynb](train/w2v-bert-v2.ipynb)
+(testing - not always working) fine-tune wav2vec v2 bert: [w2v-bert-v2.ipynb](train/w2v-bert-v2.ipynb)
 
 docker image to run on AWS EC2: [Dockerfile](docker/Dockerfile), comes with standalone scripts
 
