@@ -12,7 +12,7 @@ ATTENTION: edit file `LSVSC_train.json` & `helck_finale.json` at entry `33614.wa
 # !gdown 1bTLibQ8rmXo82YXViUr7wc2JZ5oIg9xQ  # the .rar file in official google drive download link
 # !unrar x LSVSC_100.rar
 # then upload 3 additional files: LSVSC_train.json + LSVSC_test.json + LSVSC_valid.json
-# %pip install -q 'datasets[audio]'
+# %pip install -qU 'datasets[audio]'
 
 ###############################################################################
 

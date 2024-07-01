@@ -11,44 +11,45 @@ ATTENTION: do not run this file directly, see instructions below
 
 # !mkdir gigaspeech2
 # !touch gigaspeech2/README.md
-# !touch gigaspeech2/gigaspeech2.py
-# then copy the file content to gigaspeech2.py
-
+# !wget -P gigaspeech2 https://raw.githubusercontent.com/phineas-pta/fine-tune-whisper-vi/main/misc/gigaspeech2.py
 # %pip install -qU 'datasets[audio]'
 # import datasets as hugDS
-# SAMPLING_RATE = 16_000
-# yolo = hugDS.load_dataset("gigaspeech2", streaming=True, trust_remote_code=True)  # streaming to avoid download ~1TB
+# yolo = hugDS.load_dataset("gigaspeech2", streaming=True, trust_remote_code=True)  # streaming to avoid download ~1TB immediately
 # ds = hugDS.DatasetDict()
 # ds["train"]      = hugDS.Dataset.from_generator(yolo["train"     ].__iter__)
 # ds["validation"] = hugDS.Dataset.from_generator(yolo["validation"].__iter__)
 # ds["test"]       = hugDS.Dataset.from_generator(yolo["test"      ].__iter__)
-# ds = ds.cast_column("audio", hugDS.Audio(sampling_rate=SAMPLING_RATE))  # take back column type
+# ds = ds.cast_column("audio", hugDS.Audio(sampling_rate=16_000))  # take back column type
 # ds.push_to_hub("doof-ferb/gigaspeech2_vie", token="███")
 
 ###############################################################################
 
-import os
 from huggingface_hub import hf_hub_download
 import datasets as hugDS
+import os
+from shutil import rmtree
+from time import time
 
-train_file = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/train_raw.tsv")
-dev_file   = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/dev.tsv")
-test_file  = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/test.tsv")
+_LOGGER = hugDS.utils.logging.get_logger(__name__)
+
+_TRAIN_FILE = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/train_raw.tsv")
+_DEV_FILE   = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/dev.tsv")
+_TEST_FILE  = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/test.tsv")
 
 def read_tsv(file: str) -> dict[str, str]:
 	table = {}  # {"filename": "transcription"}
 	with open(file, mode="r", encoding="utf8") as f:
 		for line in f:
-			Giga = line.split("\t")
-			table[Giga[0]] = Giga[1].strip("\n").lower()
+			yolo = line.split("\t")
+			table[yolo[0]] = yolo[1].strip("\n").lower()
 	return table
 
-train_table = read_tsv(train_file)
-dev_table   = read_tsv(dev_file)
-test_table  = read_tsv(test_file)
+_TRAIN_TABLE = read_tsv(_TRAIN_FILE)
+_DEV_TABLE   = read_tsv(_DEV_FILE)
+_TEST_TABLE  = read_tsv(_TEST_FILE)
 
 
-_N = 240
+_N = 240  # vie subset = 240 (0→239), ind = 592, tha = 193
 _URL = "https://huggingface.co/datasets/speechcolab/gigaspeech2/resolve/main/data/vi"
 _URLS = {"dev": _URL + "/dev.tar.gz", "test": _URL + "/test.tar.gz"}
 # _URLS["train"] = list(…) throw error with DownloadManager later
@@ -56,13 +57,20 @@ for i in range(_N):
 	_URLS[f"train{i}"] = f"{_URL}/train/{i}.tar.gz"
 
 
-class GigaConfig(hugDS.BuilderConfig):
-	def __init__(self, **kwargs):
-		super().__init__(**kwargs)
+_CACHE_DIR = os.path.expanduser("~/.cache/huggingface/datasets/generator")
+def _clean_cache():
+	"""delete any subfolder created older than 5min"""
+	now = time()
+	for entry in os.scandir(_CACHE_DIR):
+		if entry.is_dir():
+			age = (now - os.path.getmtime(entry.path)) / 60  # in minutes
+			if age > 5:
+				_LOGGER.info(f"Deleting {entry.path} (age: {age:.1f} min)")
+				rmtree(entry.path)
 
 
-class Giga(hugDS.GeneratorBasedBuilder):
-	BUILDER_CONFIGS = [GigaConfig(name="plain_text", version=hugDS.Version("1.0.0"), description="Plain text")]
+class GigaSpeech2_Dataset(hugDS.GeneratorBasedBuilder):
+	VERSION = hugDS.Version("1.0.0")
 
 	def _info(self):
 		return hugDS.DatasetInfo(
@@ -72,33 +80,33 @@ class Giga(hugDS.GeneratorBasedBuilder):
 			task_templates=[hugDS.tasks.AutomaticSpeechRecognition()],
 		)
 
-	def _split_generators(self, dl_manager: hugDS.DownloadManager):
+	def _split_generators(self, dl_manager: hugDS.DownloadManager) -> list[hugDS.SplitGenerator]:
 		archive = dl_manager.download(_URLS)  # cannot use download_and_extract in streaming mode
-		yolo = [  # gen_kwargs will be passed to _generate_examples below
+		return [  # gen_kwargs will be passed to _generate_examples below
+			hugDS.SplitGenerator(name=hugDS.Split.TRAIN, gen_kwargs={
+				"transcript_table": _TRAIN_TABLE,
+				"audio_files": [dl_manager.iter_archive(archive[f"train{i}"]) for i in range(_N)],
+				# cannot use `itertools.chain` got TypeError: can't pickle generator objects
+			}),
 			hugDS.SplitGenerator(name=hugDS.Split.VALIDATION, gen_kwargs={
-				"transcript_table": dev_table,
-				"audio_files": dl_manager.iter_archive(archive["dev"])
+				"transcript_table": _DEV_TABLE,
+				"audio_files": [dl_manager.iter_archive(archive["dev"])],  # make a list same as train above
 			}),
 			hugDS.SplitGenerator(name=hugDS.Split.TEST, gen_kwargs={
-				"transcript_table": test_table,
-				"audio_files": dl_manager.iter_archive(archive["test"])
+				"transcript_table": _TEST_TABLE,
+				"audio_files": [dl_manager.iter_archive(archive["test"])],  # make a list same as train above
 			}),
 		]
-		for i in range(_N):
-			yolo.append(
-				hugDS.SplitGenerator(name=hugDS.Split.TRAIN, gen_kwargs={
-					"transcript_table": train_table,
-					"audio_files": dl_manager.iter_archive(archive[f"train{i}"])
-				})
-			)
-		return yolo
 
-	def _generate_examples(self, transcript_table, audio_files):
-		key = 0
-		for path, f in audio_files:
-			file_id = os.path.splitext(os.path.basename(path))[0]
-			yield key, {
-				"audio": {"path": path, "bytes": f.read()},
-				"transcription": transcript_table[file_id],
-			}
-			key += 1
+	def _generate_examples(self, transcript_table: dict, audio_files: list[tuple]) -> tuple[int, dict]:
+		key = 0  # for legacy reason (tensorflow datasets)
+		for files in audio_files:
+			for path, f in files:
+				file_id = os.path.splitext(os.path.basename(path))[0]
+				transcript = transcript_table.get(file_id)
+				if transcript is None:
+					_LOGGER.warning("skipping " + filepath)
+				else:
+					yield key, {"audio": {"path": path, "bytes": f.read()}, "transcription": transcript}
+					key += 1
+			_clean_cache()  # force clean to prevent out of disk space on colab/kaggle
