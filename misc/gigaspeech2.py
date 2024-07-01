@@ -102,4 +102,3 @@ class Giga(hugDS.GeneratorBasedBuilder):
 				"transcription": transcript_table[file_id],
 			}
 			key += 1
-		hugDS.cleanup_cache_files()
