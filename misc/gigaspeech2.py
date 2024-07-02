@@ -64,9 +64,7 @@ def _clean_cache():
 			for subsubfolder in os.scandir(subfolder):
 				if subsubfolder.is_dir() and subsubfolder.name == "0.0.0.incomplete":
 					subfolder_to_delete = False
-				else:
-					_LOGGER.info(f"Deleting {subsubfolder.path}")
-					rmtree(subsubfolder.path)
+					break
 			if subfolder_to_delete:
 				_LOGGER.info(f"Deleting {subfolder.path}")
 				rmtree(subfolder.path)
