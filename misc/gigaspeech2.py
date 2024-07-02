@@ -28,7 +28,6 @@ from huggingface_hub import hf_hub_download
 import datasets as hugDS
 import os
 from shutil import rmtree
-from time import time
 
 _LOGGER = hugDS.utils.logging.get_logger(__name__)
 
@@ -59,14 +58,18 @@ for i in range(_N):
 
 _CACHE_DIR = os.path.expanduser("~/.cache/huggingface/datasets/generator")
 def _clean_cache():
-	"""delete any subfolder created older than 5min"""
-	now = time()
-	for entry in os.scandir(_CACHE_DIR):
-		if entry.is_dir():
-			age = (now - os.path.getmtime(entry.path)) / 60  # in minutes
-			if age > 5:
-				_LOGGER.info(f"Deleting {entry.path} (age: {age:.1f} min)")
-				rmtree(entry.path)
+	for subfolder in os.scandir(_CACHE_DIR):
+		if subfolder.is_dir():
+			subfolder_to_delete = True
+			for subsubfolder in os.scandir(subfolder):
+				if subsubfolder.is_dir() and subsubfolder.name == "0.0.0.incomplete":
+					subfolder_to_delete = False
+				else:
+					_LOGGER.info(f"Deleting {subsubfolder.path}")
+					rmtree(subsubfolder.path)
+			if subfolder_to_delete:
+				_LOGGER.info(f"Deleting {subfolder.path}")
+				rmtree(subfolder.path)
 
 
 class GigaSpeech2_Dataset(hugDS.GeneratorBasedBuilder):
