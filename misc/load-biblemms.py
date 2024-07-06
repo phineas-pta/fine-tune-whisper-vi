@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-extract vietnamese subset of the BibleMMS dataset
-"""
+"""extract vietnamese subset of the BibleMMS dataset"""
 
 # %pip install -qU 'datasets[audio]'
 import datasets as hugDS
