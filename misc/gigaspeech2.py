@@ -31,9 +31,10 @@ from shutil import rmtree
 
 _LOGGER = hugDS.utils.logging.get_logger(__name__)
 
-_TRAIN_FILE = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/train_raw.tsv")
-_DEV_FILE   = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/dev.tsv")
-_TEST_FILE  = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/test.tsv")
+_TRAIN_RAW_FILE = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/train_raw.tsv")
+_TRAIN_REF_FILE = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/train_refined.tsv")
+_DEV_FILE       = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/dev.tsv")
+_TEST_FILE      = hf_hub_download(repo_type="dataset", repo_id="speechcolab/gigaspeech2", filename="data/vi/test.tsv")
 
 def read_tsv(file: str) -> dict[str, str]:
 	table = {}  # {"filename": "transcription"}
@@ -43,31 +44,18 @@ def read_tsv(file: str) -> dict[str, str]:
 			table[yolo[0]] = yolo[1].strip("\n").lower()
 	return table
 
-_TRAIN_TABLE = read_tsv(_TRAIN_FILE)
-_DEV_TABLE   = read_tsv(_DEV_FILE)
-_TEST_TABLE  = read_tsv(_TEST_FILE)
+_TRAIN_RAW_FILE = read_tsv(_TRAIN_RAW_FILE)
+_TRAIN_REF_FILE = read_tsv(_TRAIN_REF_FILE)
+_DEV_TABLE      = read_tsv(_DEV_FILE)
+_TEST_TABLE     = read_tsv(_TEST_FILE)
 
 
-_N = 240  # vie subset = 240 (0→239), ind = 592, tha = 193
+_N = 240  # vie subset = 240 (0→239), ind subset = 592, tha subset = 193
 _URL = "https://huggingface.co/datasets/speechcolab/gigaspeech2/resolve/main/data/vi"
 _URLS = {"dev": _URL + "/dev.tar.gz", "test": _URL + "/test.tar.gz"}
 # _URLS["train"] = list(…) throw error with DownloadManager later
 for i in range(_N):
 	_URLS[f"train{i}"] = f"{_URL}/train/{i}.tar.gz"
-
-
-_CACHE_DIR = os.path.expanduser("~/.cache/huggingface/datasets/generator")
-def _clean_cache():
-	for subfolder in os.scandir(_CACHE_DIR):
-		if subfolder.is_dir():
-			subfolder_to_delete = True
-			for subsubfolder in os.scandir(subfolder):
-				if subsubfolder.is_dir() and subsubfolder.name == "0.0.0.incomplete":
-					subfolder_to_delete = False
-					break
-			if subfolder_to_delete:
-				_LOGGER.info(f"Deleting {subfolder.path}")
-				rmtree(subfolder.path)
 
 
 class GigaSpeech2_Dataset(hugDS.GeneratorBasedBuilder):
@@ -84,23 +72,32 @@ class GigaSpeech2_Dataset(hugDS.GeneratorBasedBuilder):
 	def _split_generators(self, dl_manager: hugDS.DownloadManager) -> list[hugDS.SplitGenerator]:
 		archive = dl_manager.download(_URLS)  # cannot use download_and_extract in streaming mode
 		return [  # gen_kwargs will be passed to _generate_examples below
-			hugDS.SplitGenerator(name=hugDS.Split.TRAIN, gen_kwargs={
-				"transcript_table": _TRAIN_TABLE,
+			hugDS.SplitGenerator(name="train_raw", gen_kwargs={
+				"split_name": "train_raw",
+				"transcript_table": _TRAIN_RAW_FILE,
 				"audio_files": [dl_manager.iter_archive(archive[f"train{i}"]) for i in range(_N)],
 				# cannot use `itertools.chain` got TypeError: can't pickle generator objects
 			}),
-			hugDS.SplitGenerator(name=hugDS.Split.VALIDATION, gen_kwargs={
-				"transcript_table": _DEV_TABLE,
-				"audio_files": [dl_manager.iter_archive(archive["dev"])],  # make a list same as train above
+			hugDS.SplitGenerator(name="train_refined", gen_kwargs={
+				"split_name": "train_refined",
+				"transcript_table": _TRAIN_REF_FILE,
+				"audio_files": [dl_manager.iter_archive(archive[f"train{i}"]) for i in range(_N)],
 			}),
-			hugDS.SplitGenerator(name=hugDS.Split.TEST, gen_kwargs={
+			hugDS.SplitGenerator(name="validation", gen_kwargs={
+				"split_name": "validation",
+				"transcript_table": _DEV_TABLE,
+				"audio_files": [dl_manager.iter_archive(archive["dev"])],  # make a list same as train set above
+			}),
+			hugDS.SplitGenerator(name="test", gen_kwargs={
+				"split_name": "test",
 				"transcript_table": _TEST_TABLE,
-				"audio_files": [dl_manager.iter_archive(archive["test"])],  # make a list same as train above
+				"audio_files": [dl_manager.iter_archive(archive["test"])],  # make a list same as train set above
 			}),
 		]
 
-	def _generate_examples(self, transcript_table: dict, audio_files: list[tuple]) -> tuple[int, dict]:
+	def _generate_examples(self, split_name: str, transcript_table: dict, audio_files: list[tuple]) -> tuple[int, dict]:
 		key = 0  # for legacy reason (tensorflow datasets)
+		_LOGGER.info("processing: split: " + split_name)
 		for files in audio_files:
 			for path, f in files:
 				file_id = os.path.splitext(os.path.basename(path))[0]
@@ -110,4 +107,4 @@ class GigaSpeech2_Dataset(hugDS.GeneratorBasedBuilder):
 				else:
 					yield key, {"audio": {"path": path, "bytes": f.read()}, "transcription": transcript}
 					key += 1
-			_clean_cache()  # force clean to prevent out of disk space on colab/kaggle
+			# try clean cache to prevent out of disk space on colab/kaggle BUT DOESN’T HELP
