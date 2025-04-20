@@ -124,8 +124,16 @@ def categorize(txt: str) -> pd.Series:
 
 df[["topic", "gender", "dialect", "emotion", "age"]] = df["class"].apply(categorize)
 
-df.drop(columns=["wav", "class", "duration", "text"], inplace=True)
-df.to_csv("metadata.csv", index=False, quoting=1)  # formatted following huggingface docs
+df.drop(columns=["wav", "class", "duration", "text"], inplace=True)  # formatted following huggingface docs
+
+## huggingface datasets version < 3.4
+# df.to_csv("metadata.csv", index=False, quoting=1)
+
+## huggingface datasets version ≥ 3.4
+df[["set", "file_name"]] = df["file_name"].str.split("/", n=1, expand=True)
+df[df["set"] == "train"     ].drop(columns=["set"]).to_csv("train/metadata.csv",      index=False, quoting=1)
+df[df["set"] == "test"      ].drop(columns=["set"]).to_csv("test/metadata.csv",       index=False, quoting=1)
+df[df["set"] == "validation"].drop(columns=["set"]).to_csv("validation/metadata.csv", index=False, quoting=1)
 
 ###############################################################################
 

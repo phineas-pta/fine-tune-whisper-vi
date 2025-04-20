@@ -53,10 +53,17 @@ for _, r in tqdm(yolo.iterrows()):
 
 swag = (yolo
 	.rename(columns={"seq_name": "file_name", "text": "transcription", "speaker_name": "Speaker ID"})
-	.drop(columns=["file"])
-)[["file_name", "transcription", "Speaker ID"]]
+)[["file_name", "transcription", "Speaker ID"]]  # formatted following huggingface docs
 swag["file_name"] = swag["file_name"].str.slice(start=len("vietmed/"))
-swag.to_csv("vietmed/metadata.csv", index=False, quoting=1)  # formatted following huggingface docs
+
+## huggingface datasets version < 3.4
+# swag.to_csv("vietmed/metadata.csv", index=False, quoting=1)
+
+## huggingface datasets version ≥ 3.4
+swag[["set", "file_name"]] = swag["file_name"].str.split("/", n=1, expand=True)
+swag[swag["set"] == "train"     ].drop(columns=["set"]).to_csv("vietmed/train/metadata.csv",      index=False, quoting=1)
+swag[swag["set"] == "test"      ].drop(columns=["set"]).to_csv("vietmed/test/metadata.csv",       index=False, quoting=1)
+swag[swag["set"] == "validation"].drop(columns=["set"]).to_csv("vietmed/validation/metadata.csv", index=False, quoting=1)
 
 ###############################################################################
 
