@@ -4,6 +4,9 @@
 """
 convert GigaSpeech 2 to huggingface audio datasets format
 ATTENTION: do not run this file directly, see instructions below
+
+UPDATE: this script doesn’t work anymore because this dataset is gatekept on huggingface
+but still downloadable on https://modelscope.cn/datasets/AI-ModelScope/gigaspeech2/files
 """
 
 ###############################################################################

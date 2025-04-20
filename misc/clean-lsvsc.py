@@ -11,6 +11,7 @@ ATTENTION: edit file `LSVSC_train.json` & `helck_finale.json` at entry `33614.wa
 
 # !gdown 1bTLibQ8rmXo82YXViUr7wc2JZ5oIg9xQ  # the .rar file in official google drive download link
 # !unrar x LSVSC_100.rar
+# !mkdir -p data/{train,test,validation}
 # then upload 3 additional files: LSVSC_train.json + LSVSC_test.json + LSVSC_valid.json
 # %pip install -qU 'datasets[audio]'
 
@@ -19,6 +20,7 @@ ATTENTION: edit file `LSVSC_train.json` & `helck_finale.json` at entry `33614.wa
 import os, json
 from tqdm import tqdm
 
+# retrieve wav files list + transcription
 with open("LSVSC_train.json", mode="r", encoding="utf-8") as f:
 	train_table = json.load(f)
 with open("LSVSC_test.json", mode="r", encoding="utf-8") as f:
@@ -30,16 +32,14 @@ train_list = [v["wav"] for v in train_table.values()]
 test_list  = [v["wav"] for v in  test_table.values()]
 val_list   = [v["wav"] for v in   val_table.values()]
 assert set(train_list).intersection(set(test_list)) == set()
-assert set(train_list).intersection(set(val_list)) == set()
-assert set(test_list).intersection(set(val_list)) == set()
+assert set(train_list).intersection(set( val_list)) == set()
+assert set( test_list).intersection(set( val_list)) == set()
 
-os.mkdir("data/train")
+# re-organize files following huggingface docs
 for f in tqdm(train_list):
 	os.rename(f"data/{f}", f"data/train/{f}")
-os.mkdir("data/test")
 for f in tqdm(test_list):
 	os.rename(f"data/{f}", f"data/test/{f}")
-os.mkdir("data/validation")
 for f in tqdm(val_list):
 	os.rename(f"data/{f}", f"data/validation/{f}")
 
@@ -47,8 +47,10 @@ for f in tqdm(val_list):
 
 import pandas as pd
 
+# additional metadata for wav files
 df = pd.read_json("helck_finale.json", orient="records")
 
+# merge metadata with files list + transcription
 file_list = {
 	**{f: f"data/train/{f}"      for f in train_list},
 	**{f: f"data/test/{f}"       for f in  test_list},
@@ -58,16 +60,17 @@ df["file_name"] = df["wav"].apply(lambda f: file_list[f])
 
 # a lot of anomalies in transcription
 df["transcription"] = (df["text"]
-	.str.replace(" ?- ?", " ", regex=True)
-	.str.replace("\n+",   " ", regex=True)
-	.str.replace("\r+",   " ", regex=True)
-	.str.replace(" +",    " ", regex=True)
-	.str.replace("\\", "", regex=False)
+	.str.replace(" ?- ?",   " ", regex=True)
+	.str.replace("\n+",     " ", regex=True)
+	.str.replace("\r+",     " ", regex=True)
+	.str.replace(" +",      " ", regex=True)
+	.str.replace("\\",       "", regex=False)
 	.str.replace(chr(65279), "", regex=False)
 	.str.strip()
 )
 df[df["transcription"] == ""]  # make sure 33614.wav is fixed
 
+# decoding some notations in metadata
 topic_list = {
 	"0": "news",
 	"1": "movies, drama (dialogue)",
@@ -122,7 +125,7 @@ def categorize(txt: str) -> pd.Series:
 df[["topic", "gender", "dialect", "emotion", "age"]] = df["class"].apply(categorize)
 
 df.drop(columns=["wav", "class", "duration", "text"], inplace=True)
-df.to_csv("metadata.csv", index=False, quoting=1)
+df.to_csv("metadata.csv", index=False, quoting=1)  # formatted following huggingface docs
 
 ###############################################################################
 

@@ -6,6 +6,7 @@
 # %pip install -qU 'datasets[audio]'
 import datasets as hugDS
 
+# columns to be removed
 cols = ["locale", "partition", "scenario", "intent_idx", "slot_method", "judgments", "tokens", "labels", "annot_utt", "path"]
 
 ds_train = hugDS.load_dataset("FBK-MT/Speech-MASSIVE",      streaming=True, name="vi-VN", split="train_115" ).remove_columns(cols)
