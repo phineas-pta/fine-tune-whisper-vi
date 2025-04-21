@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""convert VietMed unlabeled set to huggingface audio datasets format"""
+"""convert VLSP2020 set to huggingface audio datasets format"""
 
 ###############################################################################
 # commands to download files in colab
@@ -29,7 +29,7 @@ rows_list = []
 for row in tqdm(list_wav_files):  # cannot use list_txt_files see assertion above
 	os.rename(folder + row, "data/" + row)  # re-organize
 	with open(folder + row.replace(".wav", ".txt"), mode="r", encoding="utf8") as f:
-		txt = f.read()
+		txt = f.read().replace("<unk>", "").replace("  ", " ")
 	rows_list.append({"file_name": row, "transcription": txt})
 
 pd.DataFrame(rows_list).to_csv("data/metadata.csv", index=False, quoting=1)  # formatted following huggingface docs
