@@ -10,7 +10,7 @@
 # !unzip -P BroughtToYouByInfoRe 25hours.zip
 # !rm 25hours.zip
 # !mkdir data
-# %pip install -qU 'datasets[audio]'
+# %pip install -qU 'huggingface_hub[hf_xet]' 'datasets[audio]'
 
 ###############################################################################
 

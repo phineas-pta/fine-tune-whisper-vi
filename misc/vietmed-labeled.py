@@ -12,7 +12,7 @@
 # !gdown --folder 1WlL4gadQyCXnP8KuE9N-R9iveoC0kdt5  # folder with 10 zip files in official google drive download link
 # !for file in labeled_medical_data/*.zip; do unzip -q "$file" && rm "$file"; done
 # !mkdir -p vietmed/{train,test,validation}
-# %pip install -qU 'datasets[audio]'
+# %pip install -qU 'huggingface_hub[hf_xet]' 'datasets[audio]'
 
 ###############################################################################
 

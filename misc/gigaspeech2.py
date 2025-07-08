@@ -15,7 +15,7 @@ but still downloadable on https://modelscope.cn/datasets/AI-ModelScope/gigaspeec
 # !mkdir gigaspeech2
 # !touch gigaspeech2/README.md
 # !wget -P gigaspeech2 https://raw.githubusercontent.com/phineas-pta/fine-tune-whisper-vi/main/misc/gigaspeech2.py
-# %pip install -qU 'datasets[audio]'
+# %pip install -qU 'huggingface_hub[hf_xet]' 'datasets[audio]'
 # import datasets as hugDS
 # yolo = hugDS.load_dataset("gigaspeech2", streaming=True, trust_remote_code=True)  # streaming to avoid download ~1TB immediately
 # ds = hugDS.DatasetDict()

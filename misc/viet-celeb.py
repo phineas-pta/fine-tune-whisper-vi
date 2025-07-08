@@ -16,7 +16,7 @@
 # !rm full-dataset.zip vietnam-celeb-part.z*
 # !mkdir -p vietnam-celeb/{train,test}
 
-# %pip install -qU 'datasets[audio]'
+# %pip install -qU 'huggingface_hub[hf_xet]' 'datasets[audio]'
 
 ###############################################################################
 

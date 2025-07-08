@@ -10,7 +10,7 @@
 # !apt install libarchive-tools
 # !wget -O - https://files.huylenguyen.com/datasets/infore/audiobooks.zip | bsdtar --passphrase BroughtToYouByInfoRe -xf - -C .
 # !mkdir data
-# %pip install -qU 'datasets[audio]'
+# %pip install -qU 'huggingface_hub[hf_xet]' 'datasets[audio]'
 
 ###############################################################################
 

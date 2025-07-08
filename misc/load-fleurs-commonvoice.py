@@ -3,7 +3,7 @@
 
 """extract vietnamese subset of the FLEURS dataset & CommonVoice dataset"""
 
-# %pip install -qU 'datasets[audio]'
+# %pip install -qU 'huggingface_hub[hf_xet]' 'datasets[audio]'
 import datasets as hugDS
 
 (hugDS

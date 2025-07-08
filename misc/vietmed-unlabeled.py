@@ -13,7 +13,7 @@
 # !for file in unlabeled_medical_data/*.zip; do unzip -q "$file" && rm "$file"; done
 # !mkdir data
 # !for file in content/drive/MyDrive/Colab_Notebooks/VietMed/VietMed_unlabeled/*/*.wav; do mv "$file" data/; done
-# %pip install -qU 'datasets[audio]'
+# %pip install -qU 'huggingface_hub[hf_xet]' 'datasets[audio]'
 # %cd data
 
 ###############################################################################

@@ -18,7 +18,7 @@
 # !wget https://raw.githubusercontent.com/VietMDDDataset/VietMDD/refs/heads/main/test_fix.csv
 # !mkdir -p vietmdd/{train,validation,test,orphan}
 
-# %pip install -qU 'datasets[audio]'
+# %pip install -qU 'huggingface_hub[hf_xet]' 'datasets[audio]'
 
 ###############################################################################
 

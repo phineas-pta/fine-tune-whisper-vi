@@ -13,7 +13,7 @@ ATTENTION: edit file `LSVSC_train.json` & `helck_finale.json` at entry `33614.wa
 # !unrar x LSVSC_100.rar
 # !mkdir -p data/{train,test,validation}
 # then upload 3 additional files: LSVSC_train.json + LSVSC_test.json + LSVSC_valid.json
-# %pip install -qU 'datasets[audio]'
+# %pip install -qU 'huggingface_hub[hf_xet]' 'datasets[audio]'
 
 ###############################################################################
 

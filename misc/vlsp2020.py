@@ -10,7 +10,7 @@
 # !tar -xvf 'VinBigdata-VLSP2020-100h (1).rar'  # SOMEHOW not rar file but tar file
 # !rm 'VinBigdata-VLSP2020-100h (1).rar'
 # !mkdir data
-# %pip install -qU 'datasets[audio]'
+# %pip install -qU 'huggingface_hub[hf_xet]' 'datasets[audio]'
 
 ###############################################################################
 
